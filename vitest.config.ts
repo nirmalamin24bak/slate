@@ -17,6 +17,10 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/engine/**', 'src/resolver/**', 'src/db/**', 'src/lib/**'],
       exclude: ['**/*.test.ts'],
+      // Phase-1 gate: the engine computes what users eat — 100%, no dead branches.
+      thresholds: {
+        'src/engine/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+      },
     },
   },
 });
