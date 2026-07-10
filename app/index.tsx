@@ -254,7 +254,7 @@ export default function Journal() {
           {weightConfirm && (
             <View style={[styles.inlinePrompt, { backgroundColor: colors.fill }]}>
               <Text style={[type.label, { color: colors.ink }]}>
-                {weightConfirm.newKg} kg — that&apos;s{' '}
+                {weightConfirm.newKg} kg. That&apos;s{' '}
                 {Math.abs(weightConfirm.newKg - weightConfirm.prevKg).toFixed(1)} kg from your last
                 weigh-in. Save it?
               </Text>
