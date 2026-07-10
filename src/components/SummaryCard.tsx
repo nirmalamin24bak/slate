@@ -16,6 +16,8 @@ import Svg, { Circle } from 'react-native-svg';
 import type { DayTotals } from '@/journal';
 import { cardShadow, numberProps, radius, screenPadding, spacing, type, useTheme } from '@/theme';
 
+import { formatKcal as n, summaryLabel } from './a11y';
+
 const RING_SIZE = 56;
 const RING_STROKE = 5;
 
@@ -48,10 +50,6 @@ function Ring({ fraction }: { fraction: number }) {
       />
     </Svg>
   );
-}
-
-function n(value: number): string {
-  return Math.round(value).toLocaleString('en-IN');
 }
 
 export interface SummaryCardProps {
@@ -94,7 +92,7 @@ export function SummaryCard({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Day summary. Tap to view options"
+      accessibilityLabel={summaryLabel(totals, calorieGoal, hideCalories)}
       style={[styles.card, cardShadow, { backgroundColor: colors.surface }]}
     >
       <View style={[styles.handle, { backgroundColor: colors.fill }]} />

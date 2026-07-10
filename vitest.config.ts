@@ -27,6 +27,8 @@ export default defineConfig({
         // exercised on device (like src/db/expo.ts).
         'src/lib/export.ts',
         'src/lib/barcode.ts',
+        // Phase-6: VoiceOver copy is pure and pinned (spec/03 accessibility).
+        'src/components/a11y.ts',
       ],
       exclude: [
         '**/*.test.ts',
@@ -56,6 +58,7 @@ export default defineConfig({
         'src/stats/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/export.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/barcode.ts': { statements: 65, branches: 90, functions: 75, lines: 65 },
+        'src/components/a11y.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
       },
     },
   },

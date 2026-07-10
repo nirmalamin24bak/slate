@@ -11,29 +11,8 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { DayLine } from '@/journal';
 import { journalLineGap, motion, numberProps, screenPadding, type, useTheme } from '@/theme';
 
+import { formatKcal, journalLineLabel } from './a11y';
 import { Shimmer, useReducedMotion } from './Shimmer';
-
-function formatKcal(value: number): string {
-  return Math.round(value).toLocaleString('en-IN');
-}
-
-function accessibilityFor(line: DayLine, hideCalories: boolean): string {
-  const text = line.entry.raw_text;
-  switch (line.display.kind) {
-    case 'kcal':
-      return hideCalories ? text : `${text}, ${formatKcal(line.display.value)} calories`;
-    case 'burn':
-      return hideCalories ? text : `${text}, minus ${formatKcal(-line.display.value)} calories`;
-    case 'included':
-      return `${text}, included`;
-    case 'pending':
-      return `${text}, resolving`;
-    case 'retry':
-      return `${text}, unresolved, tap to retry`;
-    default:
-      return `${text}, logged`;
-  }
-}
 
 /** The number settle: fade in and rise 4px, 180ms (spec/03 motion #2). */
 function SettledNumber({ children }: { children: React.ReactNode }) {
@@ -135,7 +114,7 @@ export function JournalLine({ line, hideCalories, onPress }: JournalLineProps) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityFor(line, hideCalories)}
+      accessibilityLabel={journalLineLabel(entry.raw_text, line.display, hideCalories)}
       style={styles.row}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
     >
