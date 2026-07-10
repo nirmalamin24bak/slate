@@ -101,11 +101,21 @@ describe('brand voice (brand/BRAND-VOICE.md)', () => {
     const hits: string[] = [];
     for (const file of files) {
       for (const copy of extractCopy(readFileSync(file, 'utf8'))) {
-        if (copy.includes(EM_DASH)) {
+        // A bare '—' is the null / empty-state glyph (e.g. an unset weight
+        // or a no-data stat), not essay punctuation joining two clauses.
+        // Only flag em-dashes that sit inside real prose.
+        if (copy.includes(EM_DASH) && copy.trim() !== EM_DASH) {
           hits.push(`${path.relative(ROOT, file)}: "${copy}"`);
         }
       }
     }
     expect(hits).toEqual([]);
+  });
+
+  it('em-dash guard: ignores the bare null-glyph but still catches prose', () => {
+    const isViolation = (copy: string) => copy.includes(EM_DASH) && copy.trim() !== EM_DASH;
+    expect(isViolation('—')).toBe(false);
+    expect(isViolation('  —  ')).toBe(false);
+    expect(isViolation('foo — bar')).toBe(true);
   });
 });

@@ -118,7 +118,7 @@ export default function Stats() {
               <Text style={[type.heroNumber, { color: colors.ink }]}>
                 {calories.averageKcal !== null
                   ? Math.round(calories.averageKcal).toLocaleString('en-IN')
-                  : '_'}
+                  : '—'}
               </Text>
               <Text style={[type.caption, { color: colors.inkMute }]}>average</Text>
             </View>
