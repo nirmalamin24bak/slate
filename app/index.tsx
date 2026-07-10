@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { usePostHog } from 'posthog-react-native';
 
 import { DayScrubber } from '@/components/DayScrubber';
 import { DetailSheet } from '@/components/DetailSheet';
@@ -41,6 +42,7 @@ interface WeightConfirm {
 
 export default function Journal() {
   const { colors } = useTheme();
+  const posthog = usePostHog();
   const gate = useOnboardingGate();
 
   const [svc, setSvc] = useState<Services | null>(null);
@@ -136,6 +138,7 @@ export default function Journal() {
   const submit = () => {
     const text = input.trim();
     if (!svc || text.length === 0) return;
+    posthog.capture('entry_submitted', { is_today: selectedDay === today });
     setInput('');
     void svc.store.addLine(text, selectedDay);
     inputRef.current?.focus(); // cursor is already on the next line
@@ -144,6 +147,7 @@ export default function Journal() {
   const submitWeight = () => {
     const kg = Number(weightInput);
     if (!svc || !Number.isFinite(kg) || kg < 30 || kg > 250) return;
+    posthog.capture('weight_logged');
     setNeedsWeight(false);
     setWeightInput('');
     void svc.store.provideBodyWeight(kg, selectedDay);
@@ -198,7 +202,12 @@ export default function Journal() {
             <DayScrubber
               today={today}
               selected={selectedDay}
-              onSelect={setSelectedDay}
+              onSelect={(day) => {
+                if (day !== selectedDay) {
+                  posthog.capture('day_changed', { is_today: day === today });
+                }
+                setSelectedDay(day);
+              }}
               onDone={() => setScrubbing(false)}
             />
           )}
@@ -227,6 +236,7 @@ export default function Journal() {
                     key={label}
                     accessibilityRole="button"
                     onPress={() => {
+                      if (label === 'Save') posthog.capture('weight_change_confirmed');
                       void svc?.store.confirmWeight(weightConfirm.entryId, label === 'Save');
                       setWeightConfirm(null);
                     }}
@@ -299,7 +309,10 @@ export default function Journal() {
               calorieGoal={profile?.calorie_goal ?? null}
               hideCalories={hideCalories}
               showMacros={showMacros}
-              onPress={() => setOptionsOpen(true)}
+              onPress={() => {
+                posthog.capture('settings_opened');
+                setOptionsOpen(true);
+              }}
             />
           </View>
         )}
@@ -312,17 +325,25 @@ export default function Journal() {
         hideCalories={hideCalories}
         onClose={() => setDetail(null)}
         onEditText={(id, text) => {
+          posthog.capture('entry_edited', { entry_intent: detail?.entry.intent ?? 'unknown' });
           setDetail(null);
           void svc?.store.editLine(id, text);
         }}
         onNickname={(id, nickname) => {
+          if (nickname !== null) {
+            posthog.capture('entry_nickname_set', {
+              entry_intent: detail?.entry.intent ?? 'unknown',
+            });
+          }
           void svc?.store.setNickname(id, nickname);
         }}
         onDelete={(id) => {
+          posthog.capture('entry_deleted', { entry_intent: detail?.entry.intent ?? 'unknown' });
           setDetail(null);
           void svc?.store.deleteLine(id);
         }}
         onRetry={(id) => {
+          posthog.capture('entry_retry_tapped');
           setDetail(null);
           void svc?.store.retryLine(id);
         }}

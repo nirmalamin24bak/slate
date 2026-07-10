@@ -4,12 +4,14 @@ import {
   InterTight_800ExtraBold,
 } from '@expo-google-fonts/inter-tight';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname, useGlobalSearchParams } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { PostHogProvider } from 'posthog-react-native';
 
 import { useTheme } from '@/theme';
+import { posthog } from '@/config/posthog';
 
 // Keep the native splash up until fonts are ready. The journal must never
 // flash a fallback face — numbers in the wrong font jitter when Inter Tight
@@ -18,6 +20,10 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const theme = useTheme();
+  const pathname = usePathname();
+  const params = useGlobalSearchParams();
+  const previousPathname = useRef<string | undefined>(undefined);
+
   // Keys are the names src/theme/typography.ts refers to. Loading mechanism
   // can change (config plugin, custom TTFs); the names must not.
   const [fontsLoaded, fontError] = useFonts({
@@ -32,12 +38,28 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
+  // Manual screen tracking for expo-router
+  useEffect(() => {
+    if (previousPathname.current !== pathname) {
+      posthog.screen(pathname, { previous_screen: previousPathname.current ?? null, ...params });
+      previousPathname.current = pathname;
+    }
+  }, [pathname, params]);
+
   if (!fontsLoaded && !fontError) {
     return null; // splash is still visible
   }
 
   return (
-    <>
+    <PostHogProvider
+      client={posthog}
+      autocapture={{
+        captureScreens: false,
+        captureTouches: true,
+        propsToCapture: ['testID'],
+        maxElementsCaptured: 20,
+      }}
+    >
       <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
@@ -45,6 +67,6 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: theme.colors.bg },
         }}
       />
-    </>
+    </PostHogProvider>
   );
 }

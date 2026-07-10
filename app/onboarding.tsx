@@ -8,6 +8,7 @@ import * as Notifications from 'expo-notifications';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { usePostHog } from 'posthog-react-native';
 
 import {
   bmrPreview,
@@ -131,6 +132,7 @@ function Progress({ step }: { step: Step }) {
 export default function Onboarding() {
   const theme = useTheme();
   const { colors } = theme;
+  const posthog = usePostHog();
   const [step, setStep] = useState<Step>('o0');
   const [draft, setDraft] = useState<OnboardingDraft>(DEFAULT_DRAFT);
   const [goalText, setGoalText] = useState('');
@@ -142,6 +144,12 @@ export default function Onboarding() {
   useEffect(() => {
     void loadDraft().then(setDraft);
   }, []);
+
+  useEffect(() => {
+    if (step === 'o11') {
+      posthog.capture('paywall_viewed');
+    }
+  }, [step, posthog]);
 
   const update = (next: OnboardingDraft) => {
     setDraft(next);
@@ -155,6 +163,12 @@ export default function Onboarding() {
   };
 
   const start = async () => {
+    posthog.capture('onboarding_completed', {
+      body_skipped: draft.body.skipped,
+      kitchen_skipped: draft.kitchen.skipped,
+      goal_set: draft.calorieGoal !== null,
+      reminders_enabled: draft.remindersEnabled,
+    });
     await completeOnboarding(draft);
     setStep('o11');
   };
