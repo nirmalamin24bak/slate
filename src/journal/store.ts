@@ -55,6 +55,15 @@ export class JournalStore {
 
   constructor(private readonly deps: JournalDeps) {}
 
+  /**
+   * Offline install (spec/09): rows are written under a placeholder id until
+   * the anonymous session arrives, then adopted. The services layer rewrites
+   * the rows' user_id and calls this so subsequent writes use the real uid.
+   */
+  reassignUser(userId: string): void {
+    this.deps.userId = userId;
+  }
+
   on(listener: (event: JournalEvent) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

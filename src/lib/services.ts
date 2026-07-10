@@ -3,6 +3,7 @@
 // native SQLite file, and the auth session.
 
 import { openDatabase } from '../db/expo';
+import { adoptPendingUser, PENDING_USER_ID } from '../db/adoption';
 import type { SqlAdapter, SqlValue } from '../db/adapter';
 import { sqliteCacheStore } from '../db/cacheStore';
 import { ensureUserRows } from '../db/profileRepo';
@@ -14,21 +15,10 @@ import { edgeTransport } from '../resolver/transport';
 import { newId } from './ids';
 import { supabase, ensureAnonymousSession } from './supabase';
 
-/**
- * Offline install (spec/09): no session yet, so rows are written under this
- * placeholder and adopted the moment the anonymous session exists. Sync
- * never pushes placeholder rows.
- */
-export const PENDING_USER_ID = 'pending-anon';
-
-export async function adoptPendingUser(adapter: SqlAdapter, userId: string): Promise<void> {
-  for (const table of ['entries', 'weights', 'profiles', 'kitchen']) {
-    await adapter.run(`UPDATE ${table} SET user_id = ?, dirty = 1 WHERE user_id = ?`, [
-      userId,
-      PENDING_USER_ID,
-    ]);
-  }
-}
+// Offline install (spec/09): rows are written under PENDING_USER_ID until the
+// anonymous session arrives, then adopted. The re-home logic is pure and lives
+// in src/db/adoption.ts (re-exported here for callers that had it before).
+export { PENDING_USER_ID } from '../db/adoption';
 
 const supabaseRemote: RemoteDb = {
   async upsert(table, rows) {
@@ -77,24 +67,48 @@ async function build(): Promise<Services> {
       supabase.functions.invoke(name, { body: options.body as Record<string, unknown> }),
   });
 
+  // Mutable across the slow-network-install path: starts PENDING if the
+  // anonymous sign-in hasn't landed yet, becomes the real uid on adoption.
+  let currentUserId = userId;
+
   const store = new JournalStore({
     adapter,
-    userId,
+    userId: currentUserId,
     resolveText: (text) => resolve(text, { cache, transport, catalogue }),
     now: () => new Date(),
     newId,
   });
   await store.restore();
 
+  /**
+   * If we booted before the anonymous session existed (offline/slow install),
+   * adopt the placeholder rows the moment the session appears — not only at
+   * build (spec/09: flush "the moment a session exists"). Idempotent no-op
+   * once adopted.
+   */
+  async function ensureAdopted(): Promise<void> {
+    if (currentUserId !== PENDING_USER_ID) return;
+    await ensureAnonymousSession();
+    const { data } = await supabase.auth.getSession();
+    const realId = data.session?.user.id;
+    if (!realId) return;
+    await adoptPendingUser(adapter, realId);
+    currentUserId = realId;
+    store.reassignUser(realId);
+  }
+
   return {
     adapter,
     store,
-    userId,
+    get userId() {
+      return currentUserId;
+    },
     async syncTick() {
       await store.drainDue();
-      if (userId !== PENDING_USER_ID) {
+      await ensureAdopted();
+      if (currentUserId !== PENDING_USER_ID) {
         try {
-          await pushDirty(adapter, supabaseRemote);
+          await pushDirty(adapter, supabaseRemote, currentUserId);
         } catch (error) {
           console.warn('slate: push deferred:', error);
         }

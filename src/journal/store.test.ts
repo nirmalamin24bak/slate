@@ -11,7 +11,7 @@ import {
   replaceIngredients,
 } from '../db/referenceRepo';
 import type { WeightRow } from '../db/rows';
-import { metBurn } from '../engine';
+import { metBurn, stepsBurn } from '../engine';
 import { JournalStore, type JournalEvent } from './store';
 
 import { openTestDb } from '../../test/helpers/betterSqliteAdapter';
@@ -156,9 +156,9 @@ describe('JournalStore — resolution flows', () => {
     const kinds = view.lines.map((l) => l.display.kind);
     expect(kinds).toContain('burn');
     expect(kinds).toContain('included');
-    // never the sum
-    const stepsK = view.totals.burnedKcal;
-    expect(stepsK).toBeLessThan(328 + metBurn(3.5, 85, 45));
+    // count the LARGER (steps here), exactly — not the sum, not the walk
+    expect(view.totals.burnedKcal).toBeCloseTo(stepsBurn(9000, 85), 6);
+    expect(view.totals.burnedKcal).toBeGreaterThan(metBurn(3.5, 85, 45));
   });
 });
 
@@ -247,9 +247,10 @@ describe('JournalStore — weight edge cases', () => {
     const profile = await getProfile(h.db, USER);
     expect(profile?.weight_kg).toBe(90);
     expect(profile?.weight_is_assumed).toBe(0);
-    // burn recomputed with the real weight
+    // burn recomputed with the REAL 90kg, not the 65kg assumed fallback
     const view = await h.store.day(DAY);
-    expect(view.totals.burnedKcal).toBeGreaterThan(0);
+    expect(view.totals.burnedKcal).toBeCloseTo(stepsBurn(9000, 90), 6);
+    expect(view.totals.burnedKcal).not.toBeCloseTo(stepsBurn(9000, 65), 1);
   });
 });
 

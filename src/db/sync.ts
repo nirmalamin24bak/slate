@@ -35,8 +35,21 @@ function stripLocal<T extends { dirty: number }>(
   return clone;
 }
 
-export async function pushDirty(adapter: SqlAdapter, remote: RemoteDb): Promise<void> {
-  const entries = await listDirtyEntries(adapter);
+/**
+ * Push dirty rows to Supabase. `ownerId` scopes the push to one user's rows;
+ * placeholder-owned rows (offline install, pre-adoption) are never pushed —
+ * they'd fail RLS or land mis-owned. The guard lives here, not only in the
+ * caller, so no future caller can lose it (security review, defense-in-depth).
+ * Omitting `ownerId` pushes every dirty row (tests, single-user scripts).
+ */
+export async function pushDirty(
+  adapter: SqlAdapter,
+  remote: RemoteDb,
+  ownerId?: string,
+): Promise<void> {
+  const owns = (row: { user_id: string }) => ownerId === undefined || row.user_id === ownerId;
+
+  const entries = (await listDirtyEntries(adapter)).filter(owns);
   if (entries.length > 0) {
     await remote.upsert(
       'entries',
@@ -48,7 +61,7 @@ export async function pushDirty(adapter: SqlAdapter, remote: RemoteDb): Promise<
     );
   }
 
-  const weights = await listDirtyWeights(adapter);
+  const weights = (await listDirtyWeights(adapter)).filter(owns);
   if (weights.length > 0) {
     await remote.upsert(
       'weights',
@@ -60,7 +73,12 @@ export async function pushDirty(adapter: SqlAdapter, remote: RemoteDb): Promise<
     );
   }
 
-  const profile = await adapter.get<ProfileRow>('SELECT * FROM profiles WHERE dirty = 1');
+  const profile = await adapter.get<ProfileRow>(
+    ownerId === undefined
+      ? 'SELECT * FROM profiles WHERE dirty = 1'
+      : 'SELECT * FROM profiles WHERE dirty = 1 AND user_id = ?',
+    ownerId === undefined ? [] : [ownerId],
+  );
   if (profile) {
     await remote.upsert('profiles', [stripLocal(profile)]);
     await adapter.run('UPDATE profiles SET dirty = 0 WHERE user_id = ?', [profile.user_id]);

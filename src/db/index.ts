@@ -3,6 +3,7 @@
 
 export { runTransaction } from './adapter';
 export type { SqlAdapter, SqlValue } from './adapter';
+export { adoptPendingUser, PENDING_USER_ID } from './adoption';
 export { sqliteCacheStore } from './cacheStore';
 export {
   getEntry,

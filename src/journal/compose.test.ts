@@ -168,6 +168,17 @@ describe('composeDay — display', () => {
     expect(totals.flooredNetKcal).toBe(1200);
   });
 
+  it('a heavy exercise day floors the summary figure but stores the true net', () => {
+    // 1400 eaten, 900 burned → true net 500; the summary surface (SummaryCard
+    // reads flooredNetKcal) can never read below 1,200 (spec/09 Safety).
+    const { totals } = composeDay([
+      row({ intent: 'food', kcal: 1400 }),
+      row({ intent: 'steps', step_count: 20000, kcal: -900 }),
+    ]);
+    expect(totals.netKcal).toBe(500); // true value, stored/available
+    expect(totals.flooredNetKcal).toBe(1200); // what the card shows
+  });
+
   it('resolved food without nutrition (stale mirror) degrades to retry display', () => {
     const { lines } = composeDay([row({ intent: 'food', kcal: null })]);
     expect(lines[0]?.display.kind).toBe('retry');

@@ -32,6 +32,7 @@ import {
   replacePackagedFoods,
 } from './referenceRepo';
 import type { SqlValue } from './adapter';
+import { adoptPendingUser, PENDING_USER_ID } from './adoption';
 import { migrate, SCHEMA_VERSION } from './schema';
 import { pullReference, pushDirty, type RemoteDb } from './sync';
 import type { EntryRow, WeightRow } from './rows';
@@ -406,6 +407,52 @@ describe('sync', () => {
     await pushDirty(db, remote2);
     expect(remote2.upserts['entries']).toBeUndefined();
     expect(remote2.upserts['profiles']).toBeUndefined();
+    db.close();
+  });
+
+  it('adoptPendingUser re-homes every owned table from placeholder to the real uid', async () => {
+    const db = await openTestDb();
+    await ensureUserRows(db, PENDING_USER_ID, T0);
+    await insertEntry(db, entry({ id: 'e1', user_id: PENDING_USER_ID }));
+    await upsertWeight(db, {
+      id: 'w1',
+      user_id: PENDING_USER_ID,
+      log_date: '2026-07-10',
+      weight_kg: 85,
+      source: 'onboarding',
+      created_at: T0,
+      updated_at: T0,
+      deleted_at: null,
+      dirty: 1,
+    });
+
+    await adoptPendingUser(db, 'real-uid');
+
+    expect(await listDay(db, PENDING_USER_ID, '2026-07-10')).toHaveLength(0);
+    expect((await listDay(db, 'real-uid', '2026-07-10')).map((e) => e.id)).toEqual(['e1']);
+    expect(await getProfile(db, 'real-uid')).not.toBeNull();
+    expect(await getProfile(db, PENDING_USER_ID)).toBeNull();
+    // re-homed rows are dirty so they push under the real owner
+    expect((await listDirtyEntries(db)).every((e) => e.user_id === 'real-uid')).toBe(true);
+    db.close();
+  });
+
+  it("owner-scoped push never sends another user's (or placeholder) rows", async () => {
+    const db = await openTestDb();
+    await ensureUserRows(db, USER, T0);
+    await ensureUserRows(db, 'pending-anon', T0);
+    await insertEntry(db, entry({ id: 'mine', user_id: USER }));
+    await insertEntry(db, entry({ id: 'pending', user_id: 'pending-anon' }));
+
+    const remote = fakeRemote();
+    await pushDirty(db, remote, USER); // scoped to USER
+
+    const pushedIds = (remote.upserts['entries'] ?? []).map((r) => r['id']);
+    expect(pushedIds).toEqual(['mine']); // placeholder row withheld
+    const pushedProfiles = (remote.upserts['profiles'] ?? []).map((r) => r['user_id']);
+    expect(pushedProfiles).toEqual([USER]);
+    // the withheld rows stay dirty for a later, correctly-scoped push
+    expect((await listDirtyEntries(db)).map((e) => e.id)).toContain('pending');
     db.close();
   });
 

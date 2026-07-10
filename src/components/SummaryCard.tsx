@@ -4,6 +4,11 @@
 // Copy discipline (spec/09 Safety): `1,610 cals left` is a fact, never an
 // instruction. No green ring, no celebration, whatever the numbers are.
 // Hide-calories mode hides every calorie figure; macros remain.
+//
+// This card is the net-against-goal surface spec/09 governs, so it displays
+// the FLOORED net (max(net, 1200)) — the true value is stored, the floor is
+// shown, and the day can never read below 1,200 here. (The header's running
+// intraday total is a separate surface; see the FLAG in journal/compose.ts.)
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
@@ -65,7 +70,7 @@ export function SummaryCard({
   onPress,
 }: SummaryCardProps) {
   const { colors, macros } = useTheme();
-  const net = totals.netKcal;
+  const net = totals.flooredNetKcal; // max(net, 1200) — the floor binds here
   const left = calorieGoal === null ? null : calorieGoal - net;
 
   const calories = hideCalories ? null : (
