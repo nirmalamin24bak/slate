@@ -18,8 +18,10 @@ export default defineConfig({
       include: ['src/engine/**', 'src/resolver/**', 'src/db/**', 'src/lib/**'],
       exclude: ['**/*.test.ts'],
       // Phase-1 gate: the engine computes what users eat — 100%, no dead branches.
+      // Phase-2 gate: the resolver decides what those numbers refer to — same bar.
       thresholds: {
         'src/engine/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        'src/resolver/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
       },
     },
   },

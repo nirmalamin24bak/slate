@@ -6,7 +6,9 @@ const tsPlugin = require('@typescript-eslint/eslint-plugin');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/**', 'node_modules/**', '.expo/**', 'coverage/**'],
+    // supabase/functions is Deno (Deno.serve, npm: specifiers) — outside the
+    // RN toolchain; reviewed by hand and by the eval harness instead.
+    ignores: ['dist/**', 'node_modules/**', '.expo/**', 'coverage/**', 'supabase/functions/**'],
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
