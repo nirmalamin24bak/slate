@@ -28,8 +28,10 @@ jobs:
       - name: Format check
         run: npm run format:check
 
-      - name: Test
-        run: npx vitest run --passWithNoTests
+      # Coverage thresholds in vitest.config.ts enforce 100% on src/engine —
+      # the Phase-1 gate — so this step fails if engine coverage ever drops.
+      - name: Test (with engine coverage gate)
+        run: npx vitest run --coverage --passWithNoTests
 
       # Fails on high/critical. Moderates stay visible in the log; the only
       # current one is uuid<11.1.1 via expo's xcode config plugin — build-time
