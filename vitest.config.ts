@@ -22,6 +22,11 @@ export default defineConfig({
         'src/db/**',
         'src/journal/**',
         'src/onboarding/**',
+        'src/stats/**',
+        // Pure lib modules only — the rest of src/lib is RN/network-facing and
+        // exercised on device (like src/db/expo.ts).
+        'src/lib/export.ts',
+        'src/lib/barcode.ts',
       ],
       exclude: [
         '**/*.test.ts',
@@ -44,6 +49,13 @@ export default defineConfig({
         // contract — queue, drain, requeue, degrade — is fully exercised.
         'src/journal/**': { statements: 90, branches: 78, functions: 90, lines: 95 },
         'src/onboarding/**': { statements: 100, branches: 95, functions: 100, lines: 100 },
+        // Phase-5 pure surfaces: stats aggregation and the export builder are
+        // fully deterministic — 100%. barcode's parseOffResponse is fully
+        // covered; the lines below its bar are fetchOffProduct, the network
+        // wrapper exercised on device (same carve-out as src/db/expo.ts).
+        'src/stats/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        'src/lib/export.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        'src/lib/barcode.ts': { statements: 65, branches: 90, functions: 75, lines: 65 },
       },
     },
   },

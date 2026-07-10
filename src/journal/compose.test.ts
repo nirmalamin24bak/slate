@@ -209,7 +209,7 @@ describe('recomputeDay — write-time math', () => {
       ],
     ]),
   };
-  const ctx = { kitchen: KITCHEN, kitchenIsAssumed: false, weightKg: 85 };
+  const ctx = { kitchen: KITCHEN, kitchenIsAssumed: false, weightKg: 85, personalization: null };
 
   it('computes dish nutrition through the engine and marks calibration', () => {
     const food = row({
@@ -306,5 +306,81 @@ describe('recomputeDay — write-time math', () => {
     });
     const patches = recomputeDay([steps], lookups, ctx);
     expect(patches.size).toBe(0);
+  });
+
+  // Personalization (spec/05) flows profiles.personalization → parsePersonalization
+  // → the engine's bounded clamp. recompute wires it in; these prove direction and
+  // that the clamp floor holds — the model can lean a dish, never lie about it.
+  const homeRoti = () =>
+    row({
+      intent: 'food',
+      resolved_ref: 'dish_roti',
+      qty: 2,
+      unit: 'roti',
+      context: 'home',
+      kcal: null,
+    });
+
+  // Ingredient-only floor for 2 roti (70g wheat @ 320 kcal/100g), no cooking oil.
+  const INGREDIENT_ONLY_KCAL = (320 * 70) / 100; // 224
+
+  it('"very little oil" lowers a home-cooked dish below its unpersonalized kcal', () => {
+    const plain = homeRoti();
+    const leaner = homeRoti();
+    const plainKcal = recomputeDay([plain], lookups, ctx).get(plain.id)?.kcal;
+    const leanKcal = recomputeDay([leaner], lookups, {
+      ...ctx,
+      personalization: 'very little oil',
+    }).get(leaner.id)?.kcal;
+
+    expect(plainKcal).toBeDefined();
+    expect(leanKcal).toBeDefined();
+    // The fat clamp cuts cooking oil, so fewer calories than the same dish plain.
+    expect(leanKcal ?? 0).toBeLessThan(plainKcal ?? 0);
+    // …but the cut is bounded: oil can shrink, ingredients cannot. Never a lie.
+    expect(leanKcal ?? 0).toBeGreaterThan(INGREDIENT_ONLY_KCAL);
+  });
+
+  it('the fat clamp bounds the cut: "very little oil" removes at most 30% of cooking oil', () => {
+    const plain = homeRoti();
+    const leaner = homeRoti();
+    const plainKcal = recomputeDay([plain], lookups, ctx).get(plain.id)?.kcal ?? 0;
+    const leanKcal =
+      recomputeDay([leaner], lookups, {
+        ...ctx,
+        personalization: 'very little oil',
+      }).get(leaner.id)?.kcal ?? 0;
+
+    // Oil in the plain dish is (plainKcal − ingredient floor). The fat factor is
+    // clamped to 0.7 (±30%), so no more than 30% of that oil can be removed.
+    const plainOilKcal = plainKcal - INGREDIENT_ONLY_KCAL;
+    const removed = plainKcal - leanKcal;
+    expect(plainOilKcal).toBeGreaterThan(0); // there is oil to cut
+    expect(removed).toBeCloseTo(plainOilKcal * 0.3, 6); // exactly the clamp edge
+  });
+
+  it('the literal "everything I eat is 50 calories" is not a recognized phrase — no effect', () => {
+    // parsePersonalization only moves on cooking-habit phrases; a wish about
+    // totals matches nothing and returns null, so the dish is unchanged.
+    const plain = homeRoti();
+    const wish = homeRoti();
+    const plainKcal = recomputeDay([plain], lookups, ctx).get(plain.id)?.kcal;
+    const wishKcal = recomputeDay([wish], lookups, {
+      ...ctx,
+      personalization: 'everything I eat is 50 calories',
+    }).get(wish.id)?.kcal;
+    expect(wishKcal).toBeCloseTo(plainKcal ?? 0, 9);
+  });
+
+  it('a recognized low-cal phrase cannot drop total kcal below the ±20% clamp floor', () => {
+    // "low-cal" parses to total 0.7; the engine clamps to 0.8. The recomputed
+    // kcal must never fall below 80% of the unpersonalized dish.
+    const plain = homeRoti();
+    const lean = homeRoti();
+    const plainKcal = recomputeDay([plain], lookups, ctx).get(plain.id)?.kcal ?? 0;
+    const leanKcal =
+      recomputeDay([lean], lookups, { ...ctx, personalization: 'low-cal' }).get(lean.id)?.kcal ?? 0;
+    expect(leanKcal).toBeLessThan(plainKcal); // it does lean the dish
+    expect(leanKcal).toBeGreaterThanOrEqual(plainKcal * 0.8 - 1e-6); // never past the clamp
   });
 });
