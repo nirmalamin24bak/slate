@@ -14,6 +14,7 @@ import { resolve } from '../resolver';
 import { edgeTransport } from '../resolver/transport';
 import { newId } from './ids';
 import { supabase, ensureAnonymousSession } from './supabase';
+import { posthog } from '../config/posthog';
 
 // Offline install (spec/09): rows are written under PENDING_USER_ID until the
 // anonymous session arrives, then adopted. The re-home logic is pure and lives
@@ -49,7 +50,10 @@ async function build(): Promise<Services> {
   const { data } = await supabase.auth.getSession();
   const sessionUserId = data.session?.user.id ?? null;
   const userId = sessionUserId ?? PENDING_USER_ID;
-  if (sessionUserId) await adoptPendingUser(adapter, sessionUserId);
+  if (sessionUserId) {
+    await adoptPendingUser(adapter, sessionUserId);
+    posthog.identify(sessionUserId);
+  }
   await ensureUserRows(adapter, userId, new Date().toISOString());
 
   // Reference mirrors: refresh best-effort; a stale mirror still works and
@@ -95,6 +99,7 @@ async function build(): Promise<Services> {
     await adoptPendingUser(adapter, realId);
     currentUserId = realId;
     store.reassignUser(realId);
+    posthog.identify(realId);
   }
 
   return {
