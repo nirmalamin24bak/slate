@@ -68,4 +68,16 @@ export const type = {
   },
 } as const satisfies Record<string, TextStyle>;
 
+// spec/03 Accessibility: Dynamic Type up to xxLarge. Text reflows; a number
+// never wraps. Numbers cap their font scaling at the xxLarge step (iOS
+// fontScale ≈ 1.35 there) while body copy keeps scaling with the system
+// setting. numberOfLines: 1 is the hard guarantee; the cap keeps the digits
+// fitting rather than ellipsizing.
+export const numberMaxFontScale = 1.35;
+
+export const numberProps = {
+  numberOfLines: 1,
+  maxFontSizeMultiplier: numberMaxFontScale,
+} as const;
+
 export type TypeRole = keyof typeof type;

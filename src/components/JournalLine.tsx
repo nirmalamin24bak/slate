@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { DayLine } from '@/journal';
-import { journalLineGap, motion, screenPadding, type, useTheme } from '@/theme';
+import { journalLineGap, motion, numberProps, screenPadding, type, useTheme } from '@/theme';
 
 import { Shimmer, useReducedMotion } from './Shimmer';
 
@@ -82,34 +82,50 @@ export function JournalLine({ line, hideCalories, onPress }: JournalLineProps) {
 
   const right = (() => {
     if (hideCalories && (display.kind === 'kcal' || display.kind === 'burn')) {
-      return <Text style={[type.number, { color: colors.inkMute }]}>✓</Text>;
+      return (
+        <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
+          ✓
+        </Text>
+      );
     }
     switch (display.kind) {
       case 'kcal':
         return (
           <SettledNumber key={`${entry.id}-${display.value}`}>
-            <Text style={[type.number, { color: colors.ink }]}>{formatKcal(display.value)}</Text>
+            <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
+              {formatKcal(display.value)}
+            </Text>
           </SettledNumber>
         );
       case 'burn':
         return (
           <SettledNumber key={`${entry.id}-${display.value}`}>
-            <Text style={[type.number, { color: colors.inkMute }]}>
+            <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
               −{formatKcal(-display.value)}
             </Text>
           </SettledNumber>
         );
       case 'check':
-        return <Text style={[type.number, { color: colors.inkMute }]}>✓</Text>;
+        return (
+          <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
+            ✓
+          </Text>
+        );
       case 'included':
         return (
           <View style={styles.includedWrap}>
             <Text style={[type.caption, { color: colors.inkMute }]}>included</Text>
-            <Text style={[type.number, { color: colors.inkMute }]}>✓</Text>
+            <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
+              ✓
+            </Text>
           </View>
         );
       case 'retry':
-        return <Text style={[type.number, { color: colors.inkMute }]}>↻</Text>;
+        return (
+          <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
+            ↻
+          </Text>
+        );
       default:
         return null; // pending — the shimmer below carries the state
     }

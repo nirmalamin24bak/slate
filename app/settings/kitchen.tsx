@@ -13,7 +13,7 @@ import { getKitchen, patchKitchen, type KitchenPatch } from '@/db/profileRepo';
 import type { KitchenRow } from '@/db/rows';
 import { dayKey } from '@/journal';
 import { services } from '@/lib/services';
-import { radius, screenPadding, spacing, type, useTheme } from '@/theme';
+import { numberMaxFontScale, radius, screenPadding, spacing, type, useTheme } from '@/theme';
 
 const KATORI = [
   { value: '150', label: 'Small' },
@@ -119,6 +119,7 @@ export default function Kitchen() {
               onChangeText={(t) => void save({ oil_bottle_days: Math.max(1, Number(t) || 1) })}
               keyboardType="number-pad"
               accessibilityLabel="Days a bottle lasts"
+              maxFontSizeMultiplier={numberMaxFontScale}
               style={[
                 type.number,
                 styles.miniInput,
@@ -131,6 +132,7 @@ export default function Kitchen() {
               onChangeText={(t) => void save({ household_size: Math.max(1, Number(t) || 1) })}
               keyboardType="number-pad"
               accessibilityLabel="Household size"
+              maxFontSizeMultiplier={numberMaxFontScale}
               style={[
                 type.number,
                 styles.miniInput,

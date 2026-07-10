@@ -31,7 +31,16 @@ import { dayKey, type DayLine, type DayView } from '@/journal';
 import { useOnboardingGate } from '@/lib/onboardingState';
 import { takePendingLine } from '@/lib/pendingLine';
 import { services, type Services } from '@/lib/services';
-import { iconButtonSize, radius, screenPadding, spacing, type, useTheme } from '@/theme';
+import {
+  iconButtonSize,
+  numberMaxFontScale,
+  numberProps,
+  radius,
+  screenPadding,
+  spacing,
+  type,
+  useTheme,
+} from '@/theme';
 
 const SYNC_TICK_MS = 30_000;
 
@@ -211,7 +220,7 @@ export default function Journal() {
           <Pressable onPress={() => setScrubbing((s) => !s)} style={styles.header}>
             <Text style={[type.title, { color: colors.ink }]}>{title}</Text>
             {!hideCalories && view && (
-              <Text style={[type.number, styles.total, { color: colors.inkMute }]}>
+              <Text {...numberProps} style={[type.number, styles.total, { color: colors.inkMute }]}>
                 {Math.round(view.totals.netKcal).toLocaleString('en-IN')} cals
                 {view.totals.pendingCount > 0 ? `  ·  +${view.totals.pendingCount} pending` : ''}
               </Text>
@@ -277,6 +286,7 @@ export default function Journal() {
                   placeholder="kg"
                   placeholderTextColor={colors.inkMute}
                   accessibilityLabel="Your weight in kilograms"
+                  maxFontSizeMultiplier={numberMaxFontScale}
                   style={[
                     type.number,
                     styles.weightInput,

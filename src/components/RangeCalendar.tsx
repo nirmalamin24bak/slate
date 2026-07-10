@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { dayKey } from '@/journal';
-import { radius, spacing, type, useTheme } from '@/theme';
+import { numberProps, radius, spacing, type, useTheme } from '@/theme';
 
 export interface RangeCalendarProps {
   start: string;
@@ -106,6 +106,7 @@ export function RangeCalendar({ start, end, onChange }: RangeCalendarProps) {
               ]}
             >
               <Text
+                {...numberProps}
                 style={[
                   type.number,
                   {

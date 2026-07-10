@@ -14,7 +14,7 @@ export {
   screenPadding,
   spacing,
 } from './layout';
-export { fontFamily, tabular, type } from './typography';
+export { fontFamily, numberMaxFontScale, numberProps, tabular, type } from './typography';
 export type { TypeRole } from './typography';
 export { ThemeModeProvider, useThemeMode } from './mode';
 export type { ThemeMode } from './mode';

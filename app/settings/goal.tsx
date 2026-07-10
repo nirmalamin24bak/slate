@@ -11,7 +11,15 @@ import { getProfile, patchProfile } from '@/db/profileRepo';
 import { baseline, bmr, isValidGoal } from '@/engine';
 import { services } from '@/lib/services';
 import { GOAL_REJECTION_MESSAGE } from '@/onboarding';
-import { radius, screenPadding, spacing, type, useTheme } from '@/theme';
+import {
+  numberMaxFontScale,
+  numberProps,
+  radius,
+  screenPadding,
+  spacing,
+  type,
+  useTheme,
+} from '@/theme';
 
 function ageFromDob(dob: string | null, now: Date): number | null {
   if (!dob) return null;
@@ -87,6 +95,7 @@ export default function CalorieGoal() {
             placeholder=""
             placeholderTextColor={colors.inkMute}
             accessibilityLabel="Calorie goal"
+            maxFontSizeMultiplier={numberMaxFontScale}
             style={[type.heroNumber, styles.input, { color: colors.ink }]}
           />
           <Text style={[type.label, { color: colors.inkMute }]}>cals</Text>
@@ -102,13 +111,13 @@ export default function CalorieGoal() {
           <View style={styles.numbers}>
             <View style={styles.numberRow}>
               <Text style={[type.caption, { color: colors.inkMute }]}>BMR</Text>
-              <Text style={[type.number, { color: colors.inkMute }]}>
+              <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
                 {numbers.bmr.toLocaleString('en-IN')}
               </Text>
             </View>
             <View style={styles.numberRow}>
               <Text style={[type.caption, { color: colors.inkMute }]}>Sedentary baseline</Text>
-              <Text style={[type.number, { color: colors.inkMute }]}>
+              <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
                 {numbers.baseline.toLocaleString('en-IN')}
               </Text>
             </View>

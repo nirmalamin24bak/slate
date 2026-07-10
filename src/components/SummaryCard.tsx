@@ -14,7 +14,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import type { DayTotals } from '@/journal';
-import { cardShadow, radius, screenPadding, spacing, type, useTheme } from '@/theme';
+import { cardShadow, numberProps, radius, screenPadding, spacing, type, useTheme } from '@/theme';
 
 const RING_SIZE = 56;
 const RING_STROKE = 5;
@@ -75,7 +75,7 @@ export function SummaryCard({
 
   const calories = hideCalories ? null : (
     <View style={styles.calories}>
-      <Text style={[type.number, { color: colors.ink }]}>
+      <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
         {n(net)}
         {calorieGoal !== null ? ` / ${n(calorieGoal)}` : ''} cals
       </Text>
@@ -117,7 +117,9 @@ export function SummaryCard({
               ] as const
             ).map(([label, grams, color]) => (
               <View key={label} style={styles.macro}>
-                <Text style={[type.number, { color: colors.ink }]}>{Math.round(grams)}g</Text>
+                <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
+                  {Math.round(grams)}g
+                </Text>
                 <Text style={[type.caption, { color }]}>{label}</Text>
               </View>
             ))}

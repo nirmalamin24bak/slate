@@ -26,7 +26,7 @@ import {
   type StatsRange,
   type WeightPoint,
 } from '@/stats/aggregate';
-import { cardShadow, radius, screenPadding, spacing, type, useTheme } from '@/theme';
+import { cardShadow, numberProps, radius, screenPadding, spacing, type, useTheme } from '@/theme';
 
 const RANGE_OPTIONS: readonly { value: RangeKind; label: string }[] = [
   { value: 'week', label: 'Week' },
@@ -115,7 +115,7 @@ export default function Stats() {
         {!hideCalories && (
           <Card title="Calories">
             <View style={styles.headline}>
-              <Text style={[type.heroNumber, { color: colors.ink }]}>
+              <Text {...numberProps} style={[type.heroNumber, { color: colors.ink }]}>
                 {calories.averageKcal !== null
                   ? Math.round(calories.averageKcal).toLocaleString('en-IN')
                   : '—'}
@@ -134,7 +134,7 @@ export default function Stats() {
           ) : (
             <>
               <View style={styles.headline}>
-                <Text style={[type.heroNumber, { color: colors.ink }]}>
+                <Text {...numberProps} style={[type.heroNumber, { color: colors.ink }]}>
                   {latestWeight?.weight_kg.toFixed(1)} kg
                 </Text>
                 <Text style={[type.caption, { color: colors.inkMute }]}>latest</Text>
@@ -175,7 +175,9 @@ export default function Stats() {
                   ] as const
                 ).map((m) => (
                   <View key={m.label} style={styles.macroCol}>
-                    <Text style={[type.number, { color: colors.ink }]}>{Math.round(m.grams)}g</Text>
+                    <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
+                      {Math.round(m.grams)}g
+                    </Text>
                     <Text style={[type.caption, { color: colors.inkMute }]}>
                       {m.label} · {Math.round(m.share * 100)}%
                     </Text>
@@ -209,13 +211,13 @@ export default function Stats() {
           <Card title="Fiber & sugar">
             <View style={styles.macroRow}>
               <View style={styles.macroCol}>
-                <Text style={[type.number, { color: colors.ink }]}>
+                <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
                   {Math.round(fiberSugar.fiberG)}g
                 </Text>
                 <Text style={[type.caption, { color: colors.inkMute }]}>fiber · avg</Text>
               </View>
               <View style={styles.macroCol}>
-                <Text style={[type.number, { color: colors.ink }]}>
+                <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
                   {Math.round(fiberSugar.sugarG)}g
                 </Text>
                 <Text style={[type.caption, { color: colors.inkMute }]}>sugar · avg</Text>

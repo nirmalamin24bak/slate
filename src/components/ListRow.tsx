@@ -4,7 +4,7 @@
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { spacing, type, useTheme } from '@/theme';
+import { numberProps, spacing, type, useTheme } from '@/theme';
 
 import { PlusBadge } from './PlusBadge';
 
@@ -31,7 +31,9 @@ export function ListRow({ label, value, plus, chevron = true, onPress }: ListRow
       </Text>
       <View style={styles.right}>
         {value !== undefined && (
-          <Text style={[type.number, { color: colors.inkMute }]}>{value}</Text>
+          <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
+            {value}
+          </Text>
         )}
         {plus && <PlusBadge />}
         {chevron && <Text style={[type.body, { color: colors.inkMute }]}>›</Text>}
