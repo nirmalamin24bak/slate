@@ -9,15 +9,29 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
-import { useTheme } from '@/theme';
+import { ThemeModeProvider, useTheme } from '@/theme';
 
 // Keep the native splash up until fonts are ready. The journal must never
 // flash a fallback face — numbers in the wrong font jitter when Inter Tight
 // swaps in (spec/03: tabular figures, no jitter).
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function ThemedStack() {
   const theme = useTheme();
+  return (
+    <>
+      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.colors.bg },
+        }}
+      />
+    </>
+  );
+}
+
+export default function RootLayout() {
   // Keys are the names src/theme/typography.ts refers to. Loading mechanism
   // can change (config plugin, custom TTFs); the names must not.
   const [fontsLoaded, fontError] = useFonts({
@@ -37,14 +51,8 @@ export default function RootLayout() {
   }
 
   return (
-    <>
-      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: theme.colors.bg },
-        }}
-      />
-    </>
+    <ThemeModeProvider>
+      <ThemedStack />
+    </ThemeModeProvider>
   );
 }

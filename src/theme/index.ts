@@ -16,5 +16,7 @@ export {
 } from './layout';
 export { fontFamily, tabular, type } from './typography';
 export type { TypeRole } from './typography';
+export { ThemeModeProvider, useThemeMode } from './mode';
+export type { ThemeMode } from './mode';
 export { useTheme } from './useTheme';
 export type { Theme } from './useTheme';
