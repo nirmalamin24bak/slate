@@ -4,31 +4,17 @@
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 import { motion, shimmer } from '@/theme';
+
+import { useReducedMotion } from './useReducedMotion';
 
 const HEIGHT = 2;
 
 // spec/03 sweep: transparent → mint 12% → indigo 18% → transparent
 const MINT = `rgba(127, 191, 168, ${shimmer.mintOpacity})`;
 const INDIGO = `rgba(62, 92, 158, ${shimmer.indigoOpacity})`;
-
-export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    let mounted = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((value) => {
-      if (mounted) setReduced(value);
-    });
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
-    return () => {
-      mounted = false;
-      sub.remove();
-    };
-  }, []);
-  return reduced;
-}
 
 export function Shimmer({ width }: { width: number }) {
   const reduced = useReducedMotion();

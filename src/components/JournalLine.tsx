@@ -12,7 +12,8 @@ import type { DayLine } from '@/journal';
 import { journalLineGap, motion, numberProps, screenPadding, type, useTheme } from '@/theme';
 
 import { formatKcal, journalLineLabel } from './a11y';
-import { Shimmer, useReducedMotion } from './Shimmer';
+import { Shimmer } from './Shimmer';
+import { useReducedMotion } from './useReducedMotion';
 
 /** The number settle: fade in and rise 4px, 180ms (spec/03 motion #2). */
 function SettledNumber({ children }: { children: React.ReactNode }) {
