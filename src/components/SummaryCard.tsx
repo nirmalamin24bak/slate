@@ -80,7 +80,11 @@ export function SummaryCard({
         {calorieGoal !== null ? ` / ${n(calorieGoal)}` : ''} cals
       </Text>
       <Text style={[type.caption, { color: colors.inkMute }]}>
-        {left !== null ? `${n(left)} cals left` : 'No goal set'}
+        {left !== null
+          ? left >= 0
+            ? `${n(left)} cals left`
+            : `${n(-left)} cals over`
+          : 'No goal set'}
         {totals.pendingCount > 0 ? `  ·  +${totals.pendingCount} pending` : ''}
       </Text>
     </View>

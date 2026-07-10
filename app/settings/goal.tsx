@@ -10,6 +10,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { getProfile, patchProfile } from '@/db/profileRepo';
 import { baseline, bmr, isValidGoal } from '@/engine';
 import { services } from '@/lib/services';
+import { GOAL_REJECTION_MESSAGE } from '@/onboarding';
 import { radius, screenPadding, spacing, type, useTheme } from '@/theme';
 
 function ageFromDob(dob: string | null, now: Date): number | null {
@@ -93,7 +94,7 @@ export default function CalorieGoal() {
 
         {rejected && (
           <Text style={[type.label, styles.note, { color: colors.ink }]}>
-            Slate can&apos;t set a goal below 1,200 calories.
+            {GOAL_REJECTION_MESSAGE}
           </Text>
         )}
 
