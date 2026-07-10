@@ -1,0 +1,14 @@
+# Conventional commits, Slate style: `area: what changed`
+# e.g. `resolver: cache normalized phrases before LLM call`
+msg_file="$1"
+first_line=$(head -n 1 "$msg_file")
+
+if echo "$first_line" | grep -qE '^(Merge|Revert|fixup!|squash!)'; then
+  exit 0
+fi
+
+if ! echo "$first_line" | grep -qE '^[a-z0-9][a-z0-9./-]*: .+'; then
+  echo "commit-msg: first line must be 'area: what changed' (lowercase area)." >&2
+  echo "  got: $first_line" >&2
+  exit 1
+fi

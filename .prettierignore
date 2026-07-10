@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+coverage/
+package-lock.json
+assets/
+spec/
+brand/
+MASTER.md
+CLAUDE.md
