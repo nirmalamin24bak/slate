@@ -1,0 +1,254 @@
+[
+  {
+    "id": "ex_walk",
+    "name": "Walking",
+    "aliases": ["walk", "walking", "sair", "tehelna", "chalna", "paidal", "stroll", "morning walk"],
+    "met": 3.5,
+    "unit": "minutes",
+    "is_ambulatory": true,
+    "notes": "Compendium 17190: walking, 3.0 mph, level, moderate pace = MET 3.5. Chosen as the default casual-walk value. FLAG(nirmal): a leisurely 'sair'/'tehelna' may be closer to 17150 (2.5 mph, MET 3.0); pick one default for undifferentiated 'walk'."
+  },
+  {
+    "id": "ex_brisk_walk",
+    "name": "Brisk Walking",
+    "aliases": [
+      "brisk walk",
+      "brisk walking",
+      "fast walk",
+      "power walk",
+      "tez chalna",
+      "speed walk"
+    ],
+    "met": 5.0,
+    "unit": "minutes",
+    "is_ambulatory": true,
+    "notes": "Compendium 17200: walking 3.5 mph, level, brisk = MET 4.3; 17220: 4.0 mph very brisk = MET 5.0. Used 5.0 for 'brisk/fast/power' to separate clearly from ex_walk. FLAG(nirmal): if you'd rather brisk be 4.3, change here."
+  },
+  {
+    "id": "ex_jog",
+    "name": "Jogging",
+    "aliases": ["jog", "jogging", "jogged", "light run", "slow run"],
+    "met": 7.0,
+    "unit": "minutes",
+    "is_ambulatory": true,
+    "notes": "Compendium 12020: jogging, general = MET 7.0. Ambulatory (jog collides with steps on same day)."
+  },
+  {
+    "id": "ex_run",
+    "name": "Running",
+    "aliases": ["run", "running", "ran", "daud", "daudna", "bhaag", "bhaagna", "went for a run"],
+    "met": 9.8,
+    "unit": "minutes",
+    "is_ambulatory": true,
+    "notes": "Compendium 12050: running 6 mph (10 min/mile) = MET 9.8. Chosen as default recreational-run value. FLAG(nirmal): general 'run' with no pace could be treated slower (12030, 5 mph = MET 8.3); confirm default. Ambulatory."
+  },
+  {
+    "id": "ex_treadmill",
+    "name": "Treadmill",
+    "aliases": ["treadmill", "treadmill run", "treadmill walk", "running machine"],
+    "met": 6.0,
+    "unit": "minutes",
+    "is_ambulatory": true,
+    "notes": "Treadmill has no single Compendium code; value depends on walk vs run and incline. Used MET 6.0 as a mid blend (between brisk walk 5.0 and jog 7.0). Marked ambulatory per spec/06 double-count rule (treadmill listed alongside walk/jog/run/hike). FLAG(nirmal): a single default hides walk-vs-run difference; decide whether to keep one blended value or split into treadmill_walk/treadmill_run."
+  },
+  {
+    "id": "ex_hike",
+    "name": "Hiking",
+    "aliases": ["hike", "hiking", "trek", "trekking", "trail walk", "hill climb"],
+    "met": 6.0,
+    "unit": "minutes",
+    "is_ambulatory": true,
+    "notes": "Compendium 17080: hiking, cross country = MET 6.0. Ambulatory."
+  },
+  {
+    "id": "ex_cycling",
+    "name": "Cycling",
+    "aliases": [
+      "cycling",
+      "cycle",
+      "cycled",
+      "bike ride",
+      "biking",
+      "bicycle",
+      "cardio bike",
+      "spin",
+      "spinning",
+      "saikal"
+    ],
+    "met": 7.5,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 01080: bicycling, 12-13.9 mph, moderate = MET 8.0; 01070 (10-11.9 mph, light) = MET 6.8. Used 7.5 as a general-effort midpoint. Not ambulatory (does not collide with steps). FLAG(nirmal): stationary 'spin/spinning' folded in here for simplicity though the Compendium separates it (02010-02015); split if you want spin classes valued differently. Unit minutes for effort logging; ex distance-based cycling ('10 km cycling') still parses as this id with unit km."
+  },
+  {
+    "id": "ex_swimming",
+    "name": "Swimming",
+    "aliases": ["swim", "swimming", "swam", "laps", "pool", "tairna", "tairaki"],
+    "met": 6.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 18240: swimming laps, freestyle, light/moderate effort = MET 5.8; rounded to 6.0. General swim default. FLAG(nirmal): vigorous laps (18230) is MET 9.8 — confirm one default for undifferentiated 'swimming'."
+  },
+  {
+    "id": "ex_yoga",
+    "name": "Yoga",
+    "aliases": ["yoga", "yog", "hatha yoga", "yoga class", "asana", "asanas"],
+    "met": 3.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 02150: yoga, Hatha = MET 2.5; general/flow practice trends higher. Used 3.0 as a general default. FLAG(nirmal): power/vinyasa yoga runs ~4.0; confirm whether 'yoga' should carry the gentle Hatha value 2.5 instead."
+  },
+  {
+    "id": "ex_surya_namaskar",
+    "name": "Surya Namaskar",
+    "aliases": [
+      "surya namaskar",
+      "suryanamaskar",
+      "sun salutation",
+      "sun salutations",
+      "surya namaskaar"
+    ],
+    "met": 4.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "No dedicated Compendium code; sun salutations are a continuous, vigorous yoga flow, valued above Hatha. Used MET 4.0 (between yoga 3.0 and gym 5.0). FLAG(nirmal): some studies place brisk surya namaskar rounds near 5-6 MET; this is a judgment call and needs your confirmation. Users often log by rounds ('12 surya namaskar') not minutes — engine will need a rounds->minutes assumption, or treat qty as minutes; flag for spec decision."
+  },
+  {
+    "id": "ex_gym_weights",
+    "name": "Gym / Weight Training",
+    "aliases": [
+      "gym",
+      "weight training",
+      "weights",
+      "weight lifting",
+      "lifting",
+      "workout",
+      "strength training",
+      "resistance training",
+      "gym workout",
+      "gym session"
+    ],
+    "met": 5.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 02054: resistance/weight training, vigorous = MET 6.0; 02052 (light/moderate) = MET 3.5. Used 5.0 for a general 'gym'/'workout' session mixing effort levels. Not ambulatory. FLAG(nirmal): 'gym' is a catch-all — a treadmill-heavy gym visit is really cardio; consider whether bare 'gym' should default lower or prompt for detail."
+  },
+  {
+    "id": "ex_badminton",
+    "name": "Badminton",
+    "aliases": ["badminton", "badminton game", "shuttle", "shuttlecock", "played badminton"],
+    "met": 5.5,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 15030: badminton, social singles/doubles, general = MET 5.5. Not ambulatory."
+  },
+  {
+    "id": "ex_cricket",
+    "name": "Cricket",
+    "aliases": [
+      "cricket",
+      "played cricket",
+      "cricket khela",
+      "gully cricket",
+      "batting",
+      "bowling"
+    ],
+    "met": 5.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 15040: cricket, batting/bowling = MET 4.8; rounded to 5.0. Not ambulatory (much standing between deliveries). FLAG(nirmal): casual gully cricket may be lower-effort than match play; single default used."
+  },
+  {
+    "id": "ex_football",
+    "name": "Football",
+    "aliases": ["football", "soccer", "played football", "footy", "football match", "5-a-side"],
+    "met": 7.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 15610: soccer, casual, general = MET 7.0 (15605 competitive = 10.0). Used casual default. Not ambulatory (does not stack with step count as a separate ambulatory exercise per spec/06 which lists only walk/jog/run/hike/treadmill). FLAG(nirmal): football involves heavy running and could arguably collide with step count; spec/06 defines ambulatory narrowly, so left false — confirm this is intended."
+  },
+  {
+    "id": "ex_skipping",
+    "name": "Skipping Rope",
+    "aliases": ["skipping", "skipping rope", "jump rope", "rope skipping", "rassi kudna", "skips"],
+    "met": 11.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 15551: rope skipping, moderate pace, general = MET 11.0. Not ambulatory (vertical, not step-tracked). FLAG(nirmal): slow skipping (15552) is MET 8.8; moderate default used."
+  },
+  {
+    "id": "ex_dancing",
+    "name": "Dancing",
+    "aliases": [
+      "dancing",
+      "dance",
+      "danced",
+      "dance practice",
+      "garba",
+      "bhangra",
+      "naach",
+      "naachna"
+    ],
+    "met": 5.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 03031: dancing, general, moderate = MET 5.0. Not ambulatory. FLAG(nirmal): high-energy garba/bhangra runs closer to 7.8 (03015, aerobic high impact); a single general default is used — decide if regional dances deserve their own higher id."
+  },
+  {
+    "id": "ex_stairs",
+    "name": "Stairs Climbing",
+    "aliases": [
+      "stairs",
+      "stair climbing",
+      "climbing stairs",
+      "stairs climbing",
+      "step climbing",
+      "seedhi chadna",
+      "seedhiyan"
+    ],
+    "met": 8.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 17133: stair climbing, general = MET 4.0 slow, but continuous fast stair climbing (17134) = MET 8.8. Used 8.0 for deliberate stair-climbing exercise. Left NOT ambulatory: spec/06 lists only walk/jog/run/hike/treadmill as ambulatory, and stair-machine climbing is not step-count double-counted. FLAG(nirmal): everyday stair use vs stair-machine workout differ a lot; confirm this id is only for intentional exercise logging."
+  },
+  {
+    "id": "ex_elliptical",
+    "name": "Elliptical Trainer",
+    "aliases": [
+      "elliptical",
+      "cross trainer",
+      "elliptical trainer",
+      "cross-trainer",
+      "crosstrainer"
+    ],
+    "met": 5.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 02048: elliptical trainer, moderate effort = MET 5.0. Not ambulatory (spec/06 excludes it from the walk/jog/run/hike/treadmill set)."
+  },
+  {
+    "id": "ex_zumba",
+    "name": "Zumba",
+    "aliases": [
+      "zumba",
+      "zumba class",
+      "aerobics",
+      "aerobic dance",
+      "dance workout",
+      "cardio dance"
+    ],
+    "met": 6.5,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "No dedicated Zumba code; mapped to Compendium 03019 (aerobic dance / step aerobics, general) ~ MET 6.5-7.3. Used 6.5. Not ambulatory. FLAG(nirmal): Zumba intensity varies by class; confirm default."
+  },
+  {
+    "id": "ex_pilates",
+    "name": "Pilates",
+    "aliases": ["pilates", "pilate", "reformer pilates", "mat pilates"],
+    "met": 3.0,
+    "unit": "minutes",
+    "is_ambulatory": false,
+    "notes": "Compendium 02101: Pilates, general = MET 3.0 (some editions 3.8). Not ambulatory. FLAG(nirmal): reformer/advanced pilates trends higher; single general default used."
+  }
+]

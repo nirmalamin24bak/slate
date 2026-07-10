@@ -1,0 +1,500 @@
+{"text":"2 roti","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"}]}
+{"text":"do roti","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"}]}
+{"text":"ek roti","expect":[{"intent":"food","ref":"dish_roti","qty":1,"unit":"roti"}]}
+{"text":"teen phulka","expect":[{"intent":"food","ref":"dish_roti","qty":3,"unit":"roti"}]}
+{"text":"phulka 2","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"}]}
+{"text":"2 chapati","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"}]}
+{"text":"रोटी 2","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"}]}
+{"text":"2 plain paratha","expect":[{"intent":"food","ref":"dish_paratha_plain","qty":2,"unit":"piece"}]}
+{"text":"ek paratha","expect":[{"intent":"food","ref":"dish_paratha_plain","qty":1,"unit":"piece"}]}
+{"text":"tawa paratha","expect":[{"intent":"food","ref":"dish_paratha_plain"}]}
+{"text":"parantha","expect":[{"intent":"food","ref":"dish_paratha_plain"}]}
+{"text":"1 aloo paratha","expect":[{"intent":"food","ref":"dish_paratha_aloo","qty":1,"unit":"piece"}]}
+{"text":"aloo parantha 2","expect":[{"intent":"food","ref":"dish_paratha_aloo","qty":2,"unit":"piece"}]}
+{"text":"stuffed paratha","expect":[{"intent":"food","ref":"dish_paratha_aloo"}]}
+{"text":"2 poori","expect":[{"intent":"food","ref":"dish_poori","qty":2,"unit":"piece"}]}
+{"text":"puri 4","expect":[{"intent":"food","ref":"dish_poori","qty":4,"unit":"piece"}]}
+{"text":"char puri","expect":[{"intent":"food","ref":"dish_poori","qty":4,"unit":"piece"}]}
+{"text":"2 bread slice","expect":[{"intent":"food","ref":"dish_bread_white","qty":2,"unit":"piece"}]}
+{"text":"toast","expect":[{"intent":"food","ref":"dish_bread_white"}]}
+{"text":"2 slice bread","expect":[{"intent":"food","ref":"dish_bread_white","qty":2,"unit":"piece"}]}
+{"text":"white bread 2 slices","expect":[{"intent":"food","ref":"dish_bread_white","qty":2,"unit":"piece"}]}
+{"text":"1 thepla","expect":[{"intent":"food","ref":"dish_thepla","qty":1,"unit":"piece"}]}
+{"text":"methi thepla 2","expect":[{"intent":"food","ref":"dish_thepla","qty":2,"unit":"piece"}]}
+{"text":"do thepla","expect":[{"intent":"food","ref":"dish_thepla","qty":2,"unit":"piece"}]}
+{"text":"dhebra","expect":[{"intent":"food","ref":"dish_thepla"}]}
+{"text":"2 khakhra","expect":[{"intent":"food","ref":"dish_khakhra","qty":2,"unit":"piece"}]}
+{"text":"methi khakhra","expect":[{"intent":"food","ref":"dish_khakhra"}]}
+{"text":"khakra 1","expect":[{"intent":"food","ref":"dish_khakhra","qty":1,"unit":"piece"}]}
+{"text":"ek katori dal","expect":[{"intent":"food","ref":"dish_dal_toor","qty":1,"unit":"katori"}]}
+{"text":"1 katori dal","expect":[{"intent":"food","ref":"dish_dal_toor","qty":1,"unit":"katori"}]}
+{"text":"dal","expect":[{"intent":"food","ref":"dish_dal_toor"}]}
+{"text":"toor dal","expect":[{"intent":"food","ref":"dish_dal_toor"}]}
+{"text":"tur dal ek katori","expect":[{"intent":"food","ref":"dish_dal_toor","qty":1,"unit":"katori"}]}
+{"text":"arhar dal","expect":[{"intent":"food","ref":"dish_dal_toor"}]}
+{"text":"2 katori dal","expect":[{"intent":"food","ref":"dish_dal_toor","qty":2,"unit":"katori"}]}
+{"text":"masoor dal","expect":[{"intent":"food","ref":"dish_dal_masoor"}]}
+{"text":"masur dal 1 katori","expect":[{"intent":"food","ref":"dish_dal_masoor","qty":1,"unit":"katori"}]}
+{"text":"red lentil dal","expect":[{"intent":"food","ref":"dish_dal_masoor"}]}
+{"text":"dal chawal","expect":[{"intent":"food","ref":"dish_dal_toor"}]}
+{"text":"1 katori rice","expect":[{"intent":"food","ref":"dish_rice_plain","qty":1,"unit":"katori"}]}
+{"text":"chawal","expect":[{"intent":"food","ref":"dish_rice_plain"}]}
+{"text":"ek katori chawal","expect":[{"intent":"food","ref":"dish_rice_plain","qty":1,"unit":"katori"}]}
+{"text":"bhaat","expect":[{"intent":"food","ref":"dish_rice_plain"}]}
+{"text":"steamed rice","expect":[{"intent":"food","ref":"dish_rice_plain"}]}
+{"text":"2 katori rice","expect":[{"intent":"food","ref":"dish_rice_plain","qty":2,"unit":"katori"}]}
+{"text":"jeera rice","expect":[{"intent":"food","ref":"dish_jeera_rice"}]}
+{"text":"jira rice ek katori","expect":[{"intent":"food","ref":"dish_jeera_rice","qty":1,"unit":"katori"}]}
+{"text":"cumin rice","expect":[{"intent":"food","ref":"dish_jeera_rice"}]}
+{"text":"1 katori khichdi","expect":[{"intent":"food","ref":"dish_khichdi","qty":1,"unit":"katori"}]}
+{"text":"khichdi","expect":[{"intent":"food","ref":"dish_khichdi"}]}
+{"text":"moong khichdi","expect":[{"intent":"food","ref":"dish_khichdi"}]}
+{"text":"dal khichdi","expect":[{"intent":"food","ref":"dish_khichdi"}]}
+{"text":"khichri raat ko","expect":[{"intent":"food","ref":"dish_khichdi"}]}
+{"text":"1 katori curd rice","expect":[{"intent":"food","ref":"dish_curd_rice","qty":1,"unit":"katori"}]}
+{"text":"curd rice","expect":[{"intent":"food","ref":"dish_curd_rice"}]}
+{"text":"thayir sadam","expect":[{"intent":"food","ref":"dish_curd_rice"}]}
+{"text":"1 katori poha","expect":[{"intent":"food","ref":"dish_poha_gujarati","qty":1,"unit":"katori"}]}
+{"text":"poha","expect":[{"intent":"food","ref":"dish_poha_gujarati"}]}
+{"text":"pohe","expect":[{"intent":"food","ref":"dish_poha_gujarati"}]}
+{"text":"batata poha","expect":[{"intent":"food","ref":"dish_poha_gujarati"}]}
+{"text":"aval","expect":[{"intent":"food","ref":"dish_poha_gujarati"}]}
+{"text":"indori poha","expect":[{"intent":"food","ref":"dish_poha_indori"}]}
+{"text":"poha with sev","expect":[{"intent":"food","ref":"dish_poha_indori"}]}
+{"text":"1 katori upma","expect":[{"intent":"food","ref":"dish_upma","qty":1,"unit":"katori"}]}
+{"text":"rava upma","expect":[{"intent":"food","ref":"dish_upma"}]}
+{"text":"uppma","expect":[{"intent":"food","ref":"dish_upma"}]}
+{"text":"upma for breakfast","expect":[{"intent":"food","ref":"dish_upma"}]}
+{"text":"2 idli","expect":[{"intent":"food","ref":"dish_idli","qty":2,"unit":"piece"}]}
+{"text":"idly 3","expect":[{"intent":"food","ref":"dish_idli","qty":3,"unit":"piece"}]}
+{"text":"char idli","expect":[{"intent":"food","ref":"dish_idli","qty":4,"unit":"piece"}]}
+{"text":"idlis","expect":[{"intent":"food","ref":"dish_idli"}]}
+{"text":"1 dosa","expect":[{"intent":"food","ref":"dish_dosa_plain","qty":1,"unit":"piece"}]}
+{"text":"plain dosa","expect":[{"intent":"food","ref":"dish_dosa_plain"}]}
+{"text":"sada dosa","expect":[{"intent":"food","ref":"dish_dosa_plain"}]}
+{"text":"dosai","expect":[{"intent":"food","ref":"dish_dosa_plain"}]}
+{"text":"1 masala dosa","expect":[{"intent":"food","ref":"dish_masala_dosa","qty":1,"unit":"piece"}]}
+{"text":"masala dosa","expect":[{"intent":"food","ref":"dish_masala_dosa"}]}
+{"text":"mysore masala dosa","expect":[{"intent":"food","ref":"dish_masala_dosa"}]}
+{"text":"2 medu vada","expect":[{"intent":"food","ref":"dish_medu_vada","qty":2,"unit":"piece"}]}
+{"text":"medu vada","expect":[{"intent":"food","ref":"dish_medu_vada"}]}
+{"text":"urad vada","expect":[{"intent":"food","ref":"dish_medu_vada"}]}
+{"text":"1 katori sambar","expect":[{"intent":"food","ref":"dish_sambar","qty":1,"unit":"katori"}]}
+{"text":"sambhar","expect":[{"intent":"food","ref":"dish_sambar"}]}
+{"text":"sambaar","expect":[{"intent":"food","ref":"dish_sambar"}]}
+{"text":"2 besan chilla","expect":[{"intent":"food","ref":"dish_besan_chilla","qty":2,"unit":"piece"}]}
+{"text":"chilla","expect":[{"intent":"food","ref":"dish_besan_chilla"}]}
+{"text":"cheela","expect":[{"intent":"food","ref":"dish_besan_chilla"}]}
+{"text":"pudla","expect":[{"intent":"food","ref":"dish_besan_chilla"}]}
+{"text":"2 boiled eggs","expect":[{"intent":"food","ref":"dish_egg_boiled","qty":2,"unit":"piece"}]}
+{"text":"uble ande","expect":[{"intent":"food","ref":"dish_egg_boiled"}]}
+{"text":"2 anda","expect":[{"intent":"food","ref":"dish_egg_boiled","qty":2,"unit":"piece"}]}
+{"text":"do ande","expect":[{"intent":"food","ref":"dish_egg_boiled","qty":2,"unit":"piece"}]}
+{"text":"hard boiled egg","expect":[{"intent":"food","ref":"dish_egg_boiled"}]}
+{"text":"omelette","expect":[{"intent":"food","ref":"dish_egg_omelette"}]}
+{"text":"masala omelette","expect":[{"intent":"food","ref":"dish_egg_omelette"}]}
+{"text":"anda omelette","expect":[{"intent":"food","ref":"dish_egg_omelette"}]}
+{"text":"1 katori egg bhurji","expect":[{"intent":"food","ref":"dish_egg_bhurji","qty":1,"unit":"katori"}]}
+{"text":"anda bhurji","expect":[{"intent":"food","ref":"dish_egg_bhurji"}]}
+{"text":"egg burji","expect":[{"intent":"food","ref":"dish_egg_bhurji"}]}
+{"text":"bhurji","expect":[{"intent":"food","ref":"dish_egg_bhurji"}]}
+{"text":"1 katori rajma","expect":[{"intent":"food","ref":"dish_rajma","qty":1,"unit":"katori"}]}
+{"text":"rajma","expect":[{"intent":"food","ref":"dish_rajma"}]}
+{"text":"rajma masala","expect":[{"intent":"food","ref":"dish_rajma"}]}
+{"text":"do plate chole","expect":[{"intent":"food","ref":"dish_chole","qty":2,"unit":"plate"}]}
+{"text":"chole","expect":[{"intent":"food","ref":"dish_chole"}]}
+{"text":"chana masala","expect":[{"intent":"food","ref":"dish_chole"}]}
+{"text":"chhole ek katori","expect":[{"intent":"food","ref":"dish_chole","qty":1,"unit":"katori"}]}
+{"text":"1 katori palak paneer","expect":[{"intent":"food","ref":"dish_palak_paneer","qty":1,"unit":"katori"}]}
+{"text":"palak paneer","expect":[{"intent":"food","ref":"dish_palak_paneer"}]}
+{"text":"saag paneer","expect":[{"intent":"food","ref":"dish_palak_paneer"}]}
+{"text":"paneer butter masala","expect":[{"intent":"food","ref":"dish_paneer_butter_masala"}]}
+{"text":"pbm","expect":[{"intent":"food","ref":"dish_paneer_butter_masala"}]}
+{"text":"paneer makhani","expect":[{"intent":"food","ref":"dish_paneer_butter_masala"}]}
+{"text":"butter paneer 1 katori","expect":[{"intent":"food","ref":"dish_paneer_butter_masala","qty":1,"unit":"katori"}]}
+{"text":"aloo sabzi","expect":[{"intent":"food","ref":"dish_aloo_sabzi_dry"}]}
+{"text":"sukhi aloo","expect":[{"intent":"food","ref":"dish_aloo_sabzi_dry"}]}
+{"text":"jeera aloo","expect":[{"intent":"food","ref":"dish_aloo_sabzi_dry"}]}
+{"text":"batata nu shaak","expect":[{"intent":"food","ref":"dish_aloo_sabzi_dry"}]}
+{"text":"1 katori bhindi","expect":[{"intent":"food","ref":"dish_bhindi_sabzi","qty":1,"unit":"katori"}]}
+{"text":"bhindi fry","expect":[{"intent":"food","ref":"dish_bhindi_sabzi"}]}
+{"text":"okra sabzi","expect":[{"intent":"food","ref":"dish_bhindi_sabzi"}]}
+{"text":"bhindi masala","expect":[{"intent":"food","ref":"dish_bhindi_sabzi"}]}
+{"text":"1 katori chicken curry","expect":[{"intent":"food","ref":"dish_chicken_curry","qty":1,"unit":"katori"}]}
+{"text":"chicken masala","expect":[{"intent":"food","ref":"dish_chicken_curry"}]}
+{"text":"murgh curry","expect":[{"intent":"food","ref":"dish_chicken_curry"}]}
+{"text":"home chicken curry","expect":[{"intent":"food","ref":"dish_chicken_curry"}]}
+{"text":"1 plate veg biryani","expect":[{"intent":"food","ref":"dish_veg_biryani","qty":1,"unit":"plate"}]}
+{"text":"veg biryani","expect":[{"intent":"food","ref":"dish_veg_biryani"}]}
+{"text":"vegetable biryani","expect":[{"intent":"food","ref":"dish_veg_biryani"}]}
+{"text":"1 plate chicken biryani","expect":[{"intent":"food","ref":"dish_chicken_biryani","qty":1,"unit":"plate"}]}
+{"text":"biryani","expect":[{"intent":"food","ref":"dish_chicken_biryani"}]}
+{"text":"murgh biryani","expect":[{"intent":"food","ref":"dish_chicken_biryani"}]}
+{"text":"chicken dum biryani","expect":[{"intent":"food","ref":"dish_chicken_biryani"}]}
+{"text":"1 plate veg fried rice","expect":[{"intent":"food","ref":"dish_veg_fried_rice","qty":1,"unit":"plate"}]}
+{"text":"fried rice","expect":[{"intent":"food","ref":"dish_veg_fried_rice"}]}
+{"text":"1 plate pav bhaji","expect":[{"intent":"food","ref":"dish_pav_bhaji","qty":1,"unit":"plate"}]}
+{"text":"pav bhaji","expect":[{"intent":"food","ref":"dish_pav_bhaji"}]}
+{"text":"pao bhaji","expect":[{"intent":"food","ref":"dish_pav_bhaji"}]}
+{"text":"2 samosa","expect":[{"intent":"food","ref":"dish_samosa","qty":2,"unit":"piece"}]}
+{"text":"ek samosa","expect":[{"intent":"food","ref":"dish_samosa","qty":1,"unit":"piece"}]}
+{"text":"aloo samosa","expect":[{"intent":"food","ref":"dish_samosa"}]}
+{"text":"samose","expect":[{"intent":"food","ref":"dish_samosa"}]}
+{"text":"1 vada pav","expect":[{"intent":"food","ref":"dish_vada_pav","qty":1,"unit":"piece"}]}
+{"text":"vada pav","expect":[{"intent":"food","ref":"dish_vada_pav"}]}
+{"text":"wada pav","expect":[{"intent":"food","ref":"dish_vada_pav"}]}
+{"text":"vada pao","expect":[{"intent":"food","ref":"dish_vada_pav"}]}
+{"text":"2 dhokla","expect":[{"intent":"food","ref":"dish_dhokla","qty":2,"unit":"piece"}]}
+{"text":"khaman","expect":[{"intent":"food","ref":"dish_dhokla"}]}
+{"text":"khaman dhokla","expect":[{"intent":"food","ref":"dish_dhokla"}]}
+{"text":"dhokra","expect":[{"intent":"food","ref":"dish_dhokla"}]}
+{"text":"1 plate bhel","expect":[{"intent":"food","ref":"dish_bhel_puri","qty":1,"unit":"plate"}]}
+{"text":"bhel puri","expect":[{"intent":"food","ref":"dish_bhel_puri"}]}
+{"text":"bhelpuri","expect":[{"intent":"food","ref":"dish_bhel_puri"}]}
+{"text":"sukha bhel","expect":[{"intent":"food","ref":"dish_bhel_puri"}]}
+{"text":"30g sev","expect":[{"intent":"food","ref":"dish_sev","qty":30,"unit":"g"}]}
+{"text":"sev","expect":[{"intent":"food","ref":"dish_sev"}]}
+{"text":"2 papad","expect":[{"intent":"food","ref":"dish_papad","qty":2,"unit":"piece"}]}
+{"text":"papad","expect":[{"intent":"food","ref":"dish_papad"}]}
+{"text":"roasted papad","expect":[{"intent":"food","ref":"dish_papad"}]}
+{"text":"1 veg sandwich","expect":[{"intent":"food","ref":"dish_veg_sandwich","qty":1,"unit":"piece"}]}
+{"text":"bombay sandwich","expect":[{"intent":"food","ref":"dish_veg_sandwich"}]}
+{"text":"sandwich","expect":[{"intent":"food","ref":"dish_veg_sandwich"}]}
+{"text":"maggi","expect":[{"intent":"food","ref":"dish_maggi"}]}
+{"text":"1 plate maggi","expect":[{"intent":"food","ref":"dish_maggi","qty":1,"unit":"plate"}]}
+{"text":"maggie","expect":[{"intent":"food","ref":"dish_maggi"}]}
+{"text":"late night maggi","expect":[{"intent":"food","ref":"dish_maggi"}]}
+{"text":"instant noodles","expect":[{"intent":"food","ref":"dish_maggi"}]}
+{"text":"1 banana","expect":[{"intent":"food","ref":"dish_banana","qty":1,"unit":"piece"}]}
+{"text":"kela","expect":[{"intent":"food","ref":"dish_banana"}]}
+{"text":"2 kele","expect":[{"intent":"food","ref":"dish_banana","qty":2,"unit":"piece"}]}
+{"text":"banana","expect":[{"intent":"food","ref":"dish_banana"}]}
+{"text":"1 apple","expect":[{"intent":"food","ref":"dish_apple","qty":1,"unit":"piece"}]}
+{"text":"seb","expect":[{"intent":"food","ref":"dish_apple"}]}
+{"text":"apple","expect":[{"intent":"food","ref":"dish_apple"}]}
+{"text":"1 katori curd","expect":[{"intent":"food","ref":"dish_curd","qty":1,"unit":"katori"}]}
+{"text":"dahi","expect":[{"intent":"food","ref":"dish_curd"}]}
+{"text":"curd","expect":[{"intent":"food","ref":"dish_curd"}]}
+{"text":"yogurt","expect":[{"intent":"food","ref":"dish_curd"}]}
+{"text":"1 glass chaas","expect":[{"intent":"food","ref":"dish_chaas","qty":1,"unit":"glass"}]}
+{"text":"chaas","expect":[{"intent":"food","ref":"dish_chaas"}]}
+{"text":"mattha","expect":[{"intent":"food","ref":"dish_chaas"}]}
+{"text":"1 glass lassi","expect":[{"intent":"food","ref":"dish_lassi","qty":1,"unit":"glass"}]}
+{"text":"lassi","expect":[{"intent":"food","ref":"dish_lassi"}]}
+{"text":"chai","expect":[{"intent":"food","ref":"dish_chai"}]}
+{"text":"1 cup chai","expect":[{"intent":"food","ref":"dish_chai","qty":1,"unit":"cup"}]}
+{"text":"ek chai","expect":[{"intent":"food","ref":"dish_chai","qty":1,"unit":"cup"}]}
+{"text":"cutting chai","expect":[{"intent":"food","ref":"dish_chai"}]}
+{"text":"masala chai","expect":[{"intent":"food","ref":"dish_chai"}]}
+{"text":"tea","expect":[{"intent":"food","ref":"dish_chai"}]}
+{"text":"coffee","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"1 cup coffee","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"filter coffee","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"cold coffee","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"black coffee","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"२ रोटी","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"}]}
+{"text":"३ idli","expect":[{"intent":"food","ref":"dish_idli","qty":3,"unit":"piece"}]}
+{"text":"१ katori dal","expect":[{"intent":"food","ref":"dish_dal_toor","qty":1,"unit":"katori"}]}
+{"text":"४ samosa","expect":[{"intent":"food","ref":"dish_samosa","qty":4,"unit":"piece"}]}
+{"text":"chicken biryani from swiggy","expect":[{"intent":"food","ref":"dish_chicken_biryani","context":"outside"}]}
+{"text":"zomato se paneer butter masala","expect":[{"intent":"food","ref":"dish_paneer_butter_masala","context":"outside"}]}
+{"text":"ordered veg biryani","expect":[{"intent":"food","ref":"dish_veg_biryani","context":"outside"}]}
+{"text":"hotel wala dal","expect":[{"intent":"food","ref":"dish_dal_toor","context":"outside"}]}
+{"text":"bahar ka chole","expect":[{"intent":"food","ref":"dish_chole","context":"outside"}]}
+{"text":"restaurant dosa","expect":[{"intent":"food","ref":"dish_dosa_plain","context":"outside"}]}
+{"text":"canteen sandwich","expect":[{"intent":"food","ref":"dish_veg_sandwich","context":"outside"}]}
+{"text":"swiggy pav bhaji","expect":[{"intent":"food","ref":"dish_pav_bhaji","context":"outside"}]}
+{"text":"2 samosa from the stall outside","expect":[{"intent":"food","ref":"dish_samosa","qty":2,"unit":"piece","context":"outside"}]}
+{"text":"restaurant palak paneer 1 katori","expect":[{"intent":"food","ref":"dish_palak_paneer","qty":1,"unit":"katori","context":"outside"}]}
+{"text":"zomato chicken curry","expect":[{"intent":"food","ref":"dish_chicken_curry","context":"outside"}]}
+{"text":"ordered 2 masala dosa","expect":[{"intent":"food","ref":"dish_masala_dosa","qty":2,"unit":"piece","context":"outside"}]}
+{"text":"hotel biryani","expect":[{"intent":"food","ref":"dish_chicken_biryani","context":"outside"}]}
+{"text":"bahar se lassi","expect":[{"intent":"food","ref":"dish_lassi","context":"outside"}]}
+{"text":"chiken curry","expect":[{"intent":"food","ref":"dish_chicken_curry"}]}
+{"text":"biriyani","expect":[{"intent":"food","ref":"dish_chicken_biryani"}]}
+{"text":"dhoka","expect":[{"intent":"food","ref":"dish_dhokla"}]}
+{"text":"panner butter masala","expect":[{"intent":"food","ref":"dish_paneer_butter_masala"}]}
+{"text":"rojma","expect":[{"intent":"food","ref":"dish_rajma"}]}
+{"text":"sambhaar","expect":[{"intent":"food","ref":"dish_sambar"}]}
+{"text":"chappati 2","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"}]}
+{"text":"had 2 rotis and sabzi","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"}]}
+{"text":"dinner tha rajma chawal","expect":[{"intent":"food","ref":"dish_rajma"}]}
+{"text":"lunch pe chole","expect":[{"intent":"food","ref":"dish_chole"}]}
+{"text":"subah ka nashta idli","expect":[{"intent":"food","ref":"dish_idli"}]}
+{"text":"bas ek katori dal","expect":[{"intent":"food","ref":"dish_dal_toor","qty":1,"unit":"katori"}]}
+{"text":"aaj sirf khichdi khayi","expect":[{"intent":"food","ref":"dish_khichdi"}]}
+{"text":"late night 1 plate maggi","expect":[{"intent":"food","ref":"dish_maggi","qty":1,"unit":"plate"}]}
+{"text":"thoda sa poha","expect":[{"intent":"food","ref":"dish_poha_gujarati"}]}
+{"text":"ghar ka rajma","expect":[{"intent":"food","ref":"dish_rajma","context":"home"}]}
+{"text":"aadha katori dal","expect":[{"intent":"food","ref":"dish_dal_toor"}]}
+{"text":"teen roti","expect":[{"intent":"food","ref":"dish_roti","qty":3,"unit":"roti"}]}
+{"text":"paanch idli","expect":[{"intent":"food","ref":"dish_idli","qty":5,"unit":"piece"}]}
+{"text":"do samose","expect":[{"intent":"food","ref":"dish_samosa","qty":2,"unit":"piece"}]}
+{"text":"2 katori chawal","expect":[{"intent":"food","ref":"dish_rice_plain","qty":2,"unit":"katori"}]}
+{"text":"ek plate biryani","expect":[{"intent":"food","ref":"dish_chicken_biryani","qty":1,"unit":"plate"}]}
+{"text":"2 cup chai with sugar","expect":[{"intent":"food","ref":"dish_chai","qty":2,"unit":"cup"}]}
+{"text":"1.5 roti","expect":[{"intent":"food","ref":"dish_roti","qty":1.5,"unit":"roti"}]}
+{"text":"half plate chole","expect":[{"intent":"food","ref":"dish_chole","qty":0.5,"unit":"plate"}]}
+{"text":"2 boiled egg subah","expect":[{"intent":"food","ref":"dish_egg_boiled","qty":2,"unit":"piece"}]}
+{"text":"parantha ghar ka","expect":[{"intent":"food","ref":"dish_paratha_plain","context":"home"}]}
+{"text":"garelu","expect":[{"intent":"food","ref":"dish_medu_vada"}]}
+{"text":"mosaranna","expect":[{"intent":"food","ref":"dish_curd_rice"}]}
+{"text":"daddojanam","expect":[{"intent":"food","ref":"dish_curd_rice"}]}
+{"text":"uppittu","expect":[{"intent":"food","ref":"dish_upma"}]}
+{"text":"khichri","expect":[{"intent":"food","ref":"dish_khichdi"}]}
+{"text":"2 khakhra with chai","expect":[{"intent":"food","ref":"dish_khakhra","qty":2,"unit":"piece"}]}
+{"text":"1 katori sambar with rice","expect":[{"intent":"food","ref":"dish_sambar","qty":1,"unit":"katori"}]}
+{"text":"aloo sabzi with roti","expect":[{"intent":"food","ref":"dish_aloo_sabzi_dry"}]}
+{"text":"chai biscuit","expect":[{"intent":"food","ref":"dish_chai"}]}
+{"text":"2 medu vada with sambar","expect":[{"intent":"food","ref":"dish_medu_vada","qty":2,"unit":"piece"}]}
+{"text":"bhindi with roti","expect":[{"intent":"food","ref":"dish_bhindi_sabzi"}]}
+{"text":"dal fry","expect":[{"intent":"food","ref":"dish_dal_toor"}]}
+{"text":"plain rice with dal","expect":[{"intent":"food","ref":"dish_rice_plain"}]}
+{"text":"1 katori masoor","expect":[{"intent":"food","ref":"dish_dal_masoor","qty":1,"unit":"katori"}]}
+{"text":"upma with chutney","expect":[{"intent":"food","ref":"dish_upma"}]}
+{"text":"2 poori sabzi","expect":[{"intent":"food","ref":"dish_poori","qty":2,"unit":"piece"}]}
+{"text":"sada dosa with sambar","expect":[{"intent":"food","ref":"dish_dosa_plain"}]}
+{"text":"chole with bhature","expect":[{"intent":"food","ref":"dish_chole"}]}
+{"text":"ek seb","expect":[{"intent":"food","ref":"dish_apple","qty":1,"unit":"piece"}]}
+{"text":"2 papad roasted","expect":[{"intent":"food","ref":"dish_papad","qty":2,"unit":"piece"}]}
+{"text":"besan chilla with chutney","expect":[{"intent":"food","ref":"dish_besan_chilla"}]}
+{"text":"1 plate veg fried rice zomato","expect":[{"intent":"food","ref":"dish_veg_fried_rice","qty":1,"unit":"plate","context":"outside"}]}
+{"text":"home dal chawal","expect":[{"intent":"food","ref":"dish_dal_toor","context":"home"}]}
+{"text":"chawal rajma","expect":[{"intent":"food","ref":"dish_rajma"}]}
+{"text":"1 khakhra","expect":[{"intent":"food","ref":"dish_khakhra","qty":1,"unit":"piece"}]}
+{"text":"2 slices bread jam","expect":[{"intent":"food","ref":"dish_bread_white","qty":2,"unit":"piece"}]}
+{"text":"idli sambar","expect":[{"intent":"food","ref":"dish_idli"}]}
+{"text":"aloo paratha with curd","expect":[{"intent":"food","ref":"dish_paratha_aloo"}]}
+{"text":"bhel","expect":[{"intent":"food","ref":"dish_bhel_puri"}]}
+{"text":"ek cup tea","expect":[{"intent":"food","ref":"dish_chai","qty":1,"unit":"cup"}]}
+{"text":"chai without sugar","expect":[{"intent":"food","ref":"dish_chai"}]}
+{"text":"masala dosa outside","expect":[{"intent":"food","ref":"dish_masala_dosa","context":"outside"}]}
+{"text":"curd rice raat ko","expect":[{"intent":"food","ref":"dish_curd_rice"}]}
+{"text":"1 plate chole","expect":[{"intent":"food","ref":"dish_chole","qty":1,"unit":"plate"}]}
+{"text":"veg sandwich from canteen","expect":[{"intent":"food","ref":"dish_veg_sandwich","context":"outside"}]}
+{"text":"sabudana khichdi","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"plate chicken biryani swiggy","expect":[{"intent":"food","ref":"dish_chicken_biryani","qty":1,"unit":"plate","context":"outside"}]}
+{"text":"1 glass buttermilk","expect":[{"intent":"food","ref":"dish_chaas","qty":1,"unit":"glass"}]}
+{"text":"sev khaya","expect":[{"intent":"food","ref":"dish_sev"}]}
+{"text":"thoda papad","expect":[{"intent":"food","ref":"dish_papad"}]}
+{"text":"jeera rice with dal","expect":[{"intent":"food","ref":"dish_jeera_rice"}]}
+{"text":"rava upma breakfast","expect":[{"intent":"food","ref":"dish_upma"}]}
+{"text":"2 phulka","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"}]}
+{"text":"pao bhaji plate","expect":[{"intent":"food","ref":"dish_pav_bhaji","qty":1,"unit":"plate"}]}
+{"text":"2 vada pav","expect":[{"intent":"food","ref":"dish_vada_pav","qty":2,"unit":"piece"}]}
+{"text":"batata vada pav","expect":[{"intent":"food","ref":"dish_vada_pav"}]}
+{"text":"chai and rusk","expect":[{"intent":"food","ref":"dish_chai"}]}
+{"text":"45 min walk","expect":[{"intent":"exercise","ref":"ex_walk","qty":45,"unit":"minutes"}]}
+{"text":"morning walk 30 min","expect":[{"intent":"exercise","ref":"ex_walk","qty":30,"unit":"minutes"}]}
+{"text":"sair 40 min","expect":[{"intent":"exercise","ref":"ex_walk","qty":40,"unit":"minutes"}]}
+{"text":"tehelna 30 minute","expect":[{"intent":"exercise","ref":"ex_walk","qty":30,"unit":"minutes"}]}
+{"text":"2 km walk","expect":[{"intent":"exercise","ref":"ex_walk","qty":2,"unit":"km"}]}
+{"text":"brisk walk 30 min","expect":[{"intent":"exercise","ref":"ex_brisk_walk","qty":30,"unit":"minutes"}]}
+{"text":"fast walk 20 minutes","expect":[{"intent":"exercise","ref":"ex_brisk_walk","qty":20,"unit":"minutes"}]}
+{"text":"power walk 15 min","expect":[{"intent":"exercise","ref":"ex_brisk_walk","qty":15,"unit":"minutes"}]}
+{"text":"jog 25 min","expect":[{"intent":"exercise","ref":"ex_jog","qty":25,"unit":"minutes"}]}
+{"text":"jogging 30 minutes","expect":[{"intent":"exercise","ref":"ex_jog","qty":30,"unit":"minutes"}]}
+{"text":"run 5 km","expect":[{"intent":"exercise","ref":"ex_run","qty":5,"unit":"km"}]}
+{"text":"running 30 min","expect":[{"intent":"exercise","ref":"ex_run","qty":30,"unit":"minutes"}]}
+{"text":"daud 2 km","expect":[{"intent":"exercise","ref":"ex_run","qty":2,"unit":"km"}]}
+{"text":"went for a run 40 min","expect":[{"intent":"exercise","ref":"ex_run","qty":40,"unit":"minutes"}]}
+{"text":"treadmill 30 min","expect":[{"intent":"exercise","ref":"ex_treadmill","qty":30,"unit":"minutes"}]}
+{"text":"treadmill 20 minutes","expect":[{"intent":"exercise","ref":"ex_treadmill","qty":20,"unit":"minutes"}]}
+{"text":"hike 2 hours","expect":[{"intent":"exercise","ref":"ex_hike","qty":120,"unit":"minutes"}]}
+{"text":"trekking 90 min","expect":[{"intent":"exercise","ref":"ex_hike","qty":90,"unit":"minutes"}]}
+{"text":"10 km cycling","expect":[{"intent":"exercise","ref":"ex_cycling","qty":10,"unit":"km"}]}
+{"text":"cycling 45 min","expect":[{"intent":"exercise","ref":"ex_cycling","qty":45,"unit":"minutes"}]}
+{"text":"bike ride 1 hour","expect":[{"intent":"exercise","ref":"ex_cycling","qty":60,"unit":"minutes"}]}
+{"text":"spinning class 45 min","expect":[{"intent":"exercise","ref":"ex_cycling","qty":45,"unit":"minutes"}]}
+{"text":"swimming 30 min","expect":[{"intent":"exercise","ref":"ex_swimming","qty":30,"unit":"minutes"}]}
+{"text":"swim 45 minutes","expect":[{"intent":"exercise","ref":"ex_swimming","qty":45,"unit":"minutes"}]}
+{"text":"tairaki 30 min","expect":[{"intent":"exercise","ref":"ex_swimming","qty":30,"unit":"minutes"}]}
+{"text":"yoga 60 min","expect":[{"intent":"exercise","ref":"ex_yoga","qty":60,"unit":"minutes"}]}
+{"text":"yoga 1 hour","expect":[{"intent":"exercise","ref":"ex_yoga","qty":60,"unit":"minutes"}]}
+{"text":"yog 45 minutes","expect":[{"intent":"exercise","ref":"ex_yoga","qty":45,"unit":"minutes"}]}
+{"text":"12 surya namaskar","expect":[{"intent":"exercise","ref":"ex_surya_namaskar","qty":12}]}
+{"text":"surya namaskar 15 min","expect":[{"intent":"exercise","ref":"ex_surya_namaskar","qty":15,"unit":"minutes"}]}
+{"text":"gym 1 hr","expect":[{"intent":"exercise","ref":"ex_gym_weights","qty":60,"unit":"minutes"}]}
+{"text":"gym 45 min","expect":[{"intent":"exercise","ref":"ex_gym_weights","qty":45,"unit":"minutes"}]}
+{"text":"weight training 40 min","expect":[{"intent":"exercise","ref":"ex_gym_weights","qty":40,"unit":"minutes"}]}
+{"text":"gym session","expect":[{"intent":"exercise","ref":"ex_gym_weights"}]}
+{"text":"badminton 1 hour","expect":[{"intent":"exercise","ref":"ex_badminton","qty":60,"unit":"minutes"}]}
+{"text":"played badminton 45 min","expect":[{"intent":"exercise","ref":"ex_badminton","qty":45,"unit":"minutes"}]}
+{"text":"cricket khela 2 ghante","expect":[{"intent":"exercise","ref":"ex_cricket","qty":120,"unit":"minutes"}]}
+{"text":"played cricket 90 min","expect":[{"intent":"exercise","ref":"ex_cricket","qty":90,"unit":"minutes"}]}
+{"text":"football 1 hour","expect":[{"intent":"exercise","ref":"ex_football","qty":60,"unit":"minutes"}]}
+{"text":"played football 45 min","expect":[{"intent":"exercise","ref":"ex_football","qty":45,"unit":"minutes"}]}
+{"text":"skipping 15 min","expect":[{"intent":"exercise","ref":"ex_skipping","qty":15,"unit":"minutes"}]}
+{"text":"jump rope 10 minutes","expect":[{"intent":"exercise","ref":"ex_skipping","qty":10,"unit":"minutes"}]}
+{"text":"dancing 30 min","expect":[{"intent":"exercise","ref":"ex_dancing","qty":30,"unit":"minutes"}]}
+{"text":"garba 2 ghante","expect":[{"intent":"exercise","ref":"ex_dancing","qty":120,"unit":"minutes"}]}
+{"text":"stairs 15 min","expect":[{"intent":"exercise","ref":"ex_stairs","qty":15,"unit":"minutes"}]}
+{"text":"elliptical 30 min","expect":[{"intent":"exercise","ref":"ex_elliptical","qty":30,"unit":"minutes"}]}
+{"text":"cross trainer 20 min","expect":[{"intent":"exercise","ref":"ex_elliptical","qty":20,"unit":"minutes"}]}
+{"text":"zumba 45 min","expect":[{"intent":"exercise","ref":"ex_zumba","qty":45,"unit":"minutes"}]}
+{"text":"zumba class 1 hour","expect":[{"intent":"exercise","ref":"ex_zumba","qty":60,"unit":"minutes"}]}
+{"text":"pilates 40 min","expect":[{"intent":"exercise","ref":"ex_pilates","qty":40,"unit":"minutes"}]}
+{"text":"I weigh 150 lbs","expect":[{"intent":"weight","ref":null}]}
+{"text":"weekly weigh in is 130 lbs","expect":[{"intent":"weight","ref":null}]}
+{"text":"weight 85","expect":[{"intent":"weight","ref":null}]}
+{"text":"85 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"72kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"I'm at 68 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"currently at 70 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"my weight is 62 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"weight today 88.5","expect":[{"intent":"weight","ref":null}]}
+{"text":"weighed myself 74 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"aaj weight 80 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"wt 66 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"weigh-in 90 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"I weigh 60 kg now","expect":[{"intent":"weight","ref":null}]}
+{"text":"weight 55.5 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"scale says 78 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"morning weight 71 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"i am 95 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"down to 69 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"weight check 64","expect":[{"intent":"weight","ref":null}]}
+{"text":"150 lbs today","expect":[{"intent":"weight","ref":null}]}
+{"text":"i weigh 82","expect":[{"intent":"weight","ref":null}]}
+{"text":"weight 100 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"current weight 58 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"weighed 77.2 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"my wt 68","expect":[{"intent":"weight","ref":null}]}
+{"text":"weigh in 130 lbs this week","expect":[{"intent":"weight","ref":null}]}
+{"text":"weight 45 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"weight 240 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"body weight 73 kg","expect":[{"intent":"weight","ref":null}]}
+{"text":"2 kg chicken","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"1 kg paneer","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"aloo sabzi 2 katori","expect":[{"intent":"food","ref":"dish_aloo_sabzi_dry","qty":2,"unit":"katori"}]}
+{"text":"1 glass of water","expect":[{"intent":"water","ref":null,"qty":1,"unit":"glass"}]}
+{"text":"2 glasses water","expect":[{"intent":"water","ref":null,"qty":2,"unit":"glass"}]}
+{"text":"1 litre water","expect":[{"intent":"water","ref":null,"qty":1,"unit":"l"}]}
+{"text":"500 ml water","expect":[{"intent":"water","ref":null,"qty":500,"unit":"ml"}]}
+{"text":"paani 2 glass","expect":[{"intent":"water","ref":null,"qty":2,"unit":"glass"}]}
+{"text":"ek glass paani","expect":[{"intent":"water","ref":null,"qty":1,"unit":"glass"}]}
+{"text":"3 glasses of water","expect":[{"intent":"water","ref":null,"qty":3,"unit":"glass"}]}
+{"text":"2 litre paani","expect":[{"intent":"water","ref":null,"qty":2,"unit":"l"}]}
+{"text":"drank 1 litre water","expect":[{"intent":"water","ref":null}]}
+{"text":"water 1 glass","expect":[{"intent":"water","ref":null,"qty":1,"unit":"glass"}]}
+{"text":"1 bottle water","expect":[{"intent":"water","ref":null}]}
+{"text":"do glass paani","expect":[{"intent":"water","ref":null,"qty":2,"unit":"glass"}]}
+{"text":"half litre water","expect":[{"intent":"water","ref":null}]}
+{"text":"750ml water","expect":[{"intent":"water","ref":null,"qty":750,"unit":"ml"}]}
+{"text":"4 glasses water","expect":[{"intent":"water","ref":null,"qty":4,"unit":"glass"}]}
+{"text":"paani piya 2 glass","expect":[{"intent":"water","ref":null,"qty":2,"unit":"glass"}]}
+{"text":"1 glass paani","expect":[{"intent":"water","ref":null,"qty":1,"unit":"glass"}]}
+{"text":"2.5 litre water today","expect":[{"intent":"water","ref":null,"qty":2.5,"unit":"l"}]}
+{"text":"glass of water","expect":[{"intent":"water","ref":null,"qty":1,"unit":"glass"}]}
+{"text":"5 glasses paani","expect":[{"intent":"water","ref":null,"qty":5,"unit":"glass"}]}
+{"text":"1 ltr water","expect":[{"intent":"water","ref":null,"qty":1,"unit":"l"}]}
+{"text":"drank water 3 glass","expect":[{"intent":"water","ref":null,"qty":3,"unit":"glass"}]}
+{"text":"2 glass water subah","expect":[{"intent":"water","ref":null,"qty":2,"unit":"glass"}]}
+{"text":"250 ml water","expect":[{"intent":"water","ref":null,"qty":250,"unit":"ml"}]}
+{"text":"paani","expect":[{"intent":"water","ref":null,"qty":1,"unit":"glass"}]}
+{"text":"8k steps","expect":[{"intent":"steps","ref":null,"qty":8000,"unit":"steps"}]}
+{"text":"8000 steps","expect":[{"intent":"steps","ref":null,"qty":8000,"unit":"steps"}]}
+{"text":"12,000 steps","expect":[{"intent":"steps","ref":null,"qty":12000,"unit":"steps"}]}
+{"text":"10k steps","expect":[{"intent":"steps","ref":null,"qty":10000,"unit":"steps"}]}
+{"text":"5000 steps","expect":[{"intent":"steps","ref":null,"qty":5000,"unit":"steps"}]}
+{"text":"15k steps today","expect":[{"intent":"steps","ref":null,"qty":15000,"unit":"steps"}]}
+{"text":"walked 9000 steps","expect":[{"intent":"steps","ref":null,"qty":9000,"unit":"steps"}]}
+{"text":"7,500 steps","expect":[{"intent":"steps","ref":null,"qty":7500,"unit":"steps"}]}
+{"text":"6k steps","expect":[{"intent":"steps","ref":null,"qty":6000,"unit":"steps"}]}
+{"text":"11000 steps","expect":[{"intent":"steps","ref":null,"qty":11000,"unit":"steps"}]}
+{"text":"step count 8500","expect":[{"intent":"steps","ref":null,"qty":8500,"unit":"steps"}]}
+{"text":"did 10000 steps","expect":[{"intent":"steps","ref":null,"qty":10000,"unit":"steps"}]}
+{"text":"14k steps","expect":[{"intent":"steps","ref":null,"qty":14000,"unit":"steps"}]}
+{"text":"4000 steps only","expect":[{"intent":"steps","ref":null,"qty":4000,"unit":"steps"}]}
+{"text":"steps 9k","expect":[{"intent":"steps","ref":null,"qty":9000,"unit":"steps"}]}
+{"text":"20,000 steps","expect":[{"intent":"steps","ref":null,"qty":20000,"unit":"steps"}]}
+{"text":"3500 steps","expect":[{"intent":"steps","ref":null,"qty":3500,"unit":"steps"}]}
+{"text":"today 12k steps","expect":[{"intent":"steps","ref":null,"qty":12000,"unit":"steps"}]}
+{"text":"18000 steps","expect":[{"intent":"steps","ref":null,"qty":18000,"unit":"steps"}]}
+{"text":"7k steps","expect":[{"intent":"steps","ref":null,"qty":7000,"unit":"steps"}]}
+{"text":"step count today 9200","expect":[{"intent":"steps","ref":null,"qty":9200,"unit":"steps"}]}
+{"text":"13,500 steps","expect":[{"intent":"steps","ref":null,"qty":13500,"unit":"steps"}]}
+{"text":"2500 steps","expect":[{"intent":"steps","ref":null,"qty":2500,"unit":"steps"}]}
+{"text":"16k steps done","expect":[{"intent":"steps","ref":null,"qty":16000,"unit":"steps"}]}
+{"text":"walked 10k steps today","expect":[{"intent":"steps","ref":null,"qty":10000,"unit":"steps"}]}
+{"text":"slept 7 hours","expect":[{"intent":"sleep","ref":null,"qty":7,"unit":"hours"}]}
+{"text":"8 hours sleep","expect":[{"intent":"sleep","ref":null,"qty":8,"unit":"hours"}]}
+{"text":"sleep 6 hrs","expect":[{"intent":"sleep","ref":null,"qty":6,"unit":"hours"}]}
+{"text":"soya 7 ghante","expect":[{"intent":"sleep","ref":null,"qty":7,"unit":"hours"}]}
+{"text":"neend 8 hours","expect":[{"intent":"sleep","ref":null,"qty":8,"unit":"hours"}]}
+{"text":"slept well 8 hrs","expect":[{"intent":"sleep","ref":null,"qty":8,"unit":"hours"}]}
+{"text":"6 hours neend","expect":[{"intent":"sleep","ref":null,"qty":6,"unit":"hours"}]}
+{"text":"barely slept 4 hours","expect":[{"intent":"sleep","ref":null,"qty":4,"unit":"hours"}]}
+{"text":"7.5 hours sleep","expect":[{"intent":"sleep","ref":null,"qty":7.5,"unit":"hours"}]}
+{"text":"slept 9 hours","expect":[{"intent":"sleep","ref":null,"qty":9,"unit":"hours"}]}
+{"text":"poor sleep last night","expect":[{"intent":"sleep","ref":null}]}
+{"text":"didn't sleep well","expect":[{"intent":"sleep","ref":null}]}
+{"text":"5 hrs sleep only","expect":[{"intent":"sleep","ref":null,"qty":5,"unit":"hours"}]}
+{"text":"achi neend aayi","expect":[{"intent":"sleep","ref":null}]}
+{"text":"sleep 7.5 hrs","expect":[{"intent":"sleep","ref":null,"qty":7.5,"unit":"hours"}]}
+{"text":"sushi","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"quinoa salad","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"85","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"120","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"42","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"asdfgh","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"pizza","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"burger","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"pasta","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"french fries","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"kfc chicken","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"protein shake","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"oats","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"cornflakes","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"2 kg mango","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"gulab jamun","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"ice cream","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"biscuit","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"namkeen","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"kachori","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"frankie","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"hakka noodles","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"manchurian","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"something","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"aaj kuch nahi khaya","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"2 roti aur ek katori dal","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"},{"intent":"food","ref":"dish_dal_toor","qty":1,"unit":"katori"}]}
+{"text":"3 roti and dal","expect":[{"intent":"food","ref":"dish_roti","qty":3,"unit":"roti"},{"intent":"food","ref":"dish_dal_toor"}]}
+{"text":"idli aur sambar","expect":[{"intent":"food","ref":"dish_idli"},{"intent":"food","ref":"dish_sambar"}]}
+{"text":"2 idli 1 vada","expect":[{"intent":"food","ref":"dish_idli","qty":2,"unit":"piece"},{"intent":"food","ref":"dish_medu_vada","qty":1,"unit":"piece"}]}
+{"text":"chai aur biscuit","expect":[{"intent":"food","ref":"dish_chai"},{"intent":"unresolved","ref":null}]}
+{"text":"dal chawal aur roti","expect":[{"intent":"food","ref":"dish_dal_toor"},{"intent":"food","ref":"dish_rice_plain"},{"intent":"food","ref":"dish_roti"}]}
+{"text":"2 roti sabzi aur dahi","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"},{"intent":"food","ref":"dish_curd"}]}
+{"text":"masala dosa and filter coffee","expect":[{"intent":"food","ref":"dish_masala_dosa"},{"intent":"unresolved","ref":null}]}
+{"text":"poha and chai","expect":[{"intent":"food","ref":"dish_poha_gujarati"},{"intent":"food","ref":"dish_chai"}]}
+{"text":"2 paratha with curd","expect":[{"intent":"food","ref":"dish_paratha_plain","qty":2,"unit":"piece"},{"intent":"food","ref":"dish_curd"}]}
+{"text":"rajma chawal","expect":[{"intent":"food","ref":"dish_rajma"},{"intent":"food","ref":"dish_rice_plain"}]}
+{"text":"chole bhature","expect":[{"intent":"food","ref":"dish_chole"},{"intent":"unresolved","ref":null}]}
+{"text":"1 plate biryani and lassi","expect":[{"intent":"food","ref":"dish_chicken_biryani","qty":1,"unit":"plate"},{"intent":"food","ref":"dish_lassi"}]}
+{"text":"egg omelette and 2 toast","expect":[{"intent":"food","ref":"dish_egg_omelette"},{"intent":"food","ref":"dish_bread_white","qty":2,"unit":"piece"}]}
+{"text":"dosa sambar aur chutney","expect":[{"intent":"food","ref":"dish_dosa_plain"},{"intent":"food","ref":"dish_sambar"},{"intent":"unresolved","ref":null}]}
+{"text":"2 roti ke saath bhindi","expect":[{"intent":"food","ref":"dish_roti","qty":2,"unit":"roti"},{"intent":"food","ref":"dish_bhindi_sabzi"}]}
+{"text":"khichdi aur papad","expect":[{"intent":"food","ref":"dish_khichdi"},{"intent":"food","ref":"dish_papad"}]}
+{"text":"gym 1 hr and 8k steps","expect":[{"intent":"exercise","ref":"ex_gym_weights","qty":60,"unit":"minutes"},{"intent":"steps","ref":null,"qty":8000,"unit":"steps"}]}
+{"text":"45 min walk and 2 glass water","expect":[{"intent":"exercise","ref":"ex_walk","qty":45,"unit":"minutes"},{"intent":"water","ref":null,"qty":2,"unit":"glass"}]}
+{"text":"2 samosa aur ek chai","expect":[{"intent":"food","ref":"dish_samosa","qty":2,"unit":"piece"},{"intent":"food","ref":"dish_chai","qty":1,"unit":"cup"}]}
+{"text":"thepla wrap","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"2 kg fish","expect":[{"intent":"unresolved","ref":null}]}
+{"text":"2 katori dal chawal","expect":[{"intent":"food","ref":"dish_dal_toor","qty":2,"unit":"katori"}]}
+{"text":"ghar ki dal","expect":[{"intent":"food","ref":"dish_dal_toor","context":"home"}]}
+{"text":"dal roti","expect":[{"intent":"food","ref":"dish_dal_toor"}]}
+{"text":"ek plate poha","expect":[{"intent":"food","ref":"dish_poha_gujarati","qty":1,"unit":"plate"}]}
+{"text":"2 katori upma","expect":[{"intent":"food","ref":"dish_upma","qty":2,"unit":"katori"}]}
+{"text":"3 dosa","expect":[{"intent":"food","ref":"dish_dosa_plain","qty":3,"unit":"piece"}]}
+{"text":"2 masala dosa","expect":[{"intent":"food","ref":"dish_masala_dosa","qty":2,"unit":"piece"}]}
+{"text":"ek katori sambar","expect":[{"intent":"food","ref":"dish_sambar","qty":1,"unit":"katori"}]}
+{"text":"2 katori rajma","expect":[{"intent":"food","ref":"dish_rajma","qty":2,"unit":"katori"}]}
+{"text":"aadha plate chole","expect":[{"intent":"food","ref":"dish_chole"}]}
+{"text":"1 katori paneer butter masala","expect":[{"intent":"food","ref":"dish_paneer_butter_masala","qty":1,"unit":"katori"}]}
+{"text":"2 katori chicken curry","expect":[{"intent":"food","ref":"dish_chicken_curry","qty":2,"unit":"katori"}]}
+{"text":"3 poori","expect":[{"intent":"food","ref":"dish_poori","qty":3,"unit":"piece"}]}
+{"text":"2 aloo paratha","expect":[{"intent":"food","ref":"dish_paratha_aloo","qty":2,"unit":"piece"}]}
+{"text":"3 vada pav","expect":[{"intent":"food","ref":"dish_vada_pav","qty":3,"unit":"piece"}]}
+{"text":"2 samosa aur chutney","expect":[{"intent":"food","ref":"dish_samosa","qty":2,"unit":"piece"}]}
+{"text":"ek katori khichdi","expect":[{"intent":"food","ref":"dish_khichdi","qty":1,"unit":"katori"}]}
+{"text":"2 bhel plate","expect":[{"intent":"food","ref":"dish_bhel_puri","qty":2,"unit":"plate"}]}
+{"text":"50g sev","expect":[{"intent":"food","ref":"dish_sev","qty":50,"unit":"g"}]}
