@@ -1,0 +1,1216 @@
+[
+  {
+    "id": "dish_poha_gujarati",
+    "name": "Poha (Gujarati)",
+    "region": "gujarati",
+    "aliases": ["poha", "pohe", "aval", "batata poha"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 8,
+    "ingredients": [
+      {
+        "ref": "rice_flattened",
+        "grams": 60
+      },
+      {
+        "ref": "potato",
+        "grams": 30
+      },
+      {
+        "ref": "onion",
+        "grams": 20
+      },
+      {
+        "ref": "peanut",
+        "grams": 10
+      },
+      {
+        "ref": "sugar",
+        "grams": 8
+      }
+    ],
+    "notes": "Sweet-leaning Gujarati style with sugar and peanuts; lemon and trace spices omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_poha_indori",
+    "name": "Poha (Indori)",
+    "region": "indori",
+    "aliases": ["indori poha", "poha with sev", "steamed poha"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 11,
+    "ingredients": [
+      {
+        "ref": "rice_flattened",
+        "grams": 60
+      },
+      {
+        "ref": "gram_flour_besan",
+        "grams": 8
+      },
+      {
+        "ref": "onion",
+        "grams": 20
+      }
+    ],
+    "notes": "Topped with ~12g sev, decomposed as besan 8g + frying oil 3g (added to oil total); jeeravan masala omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_roti",
+    "name": "Roti / Phulka",
+    "region": null,
+    "aliases": ["roti", "phulka", "chapati", "fulka"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "wheat_flour_whole",
+        "grams": 25
+      }
+    ],
+    "notes": "Dry phulka, no ghee applied; medium 6-inch roti from 25g atta."
+  },
+  {
+    "id": "dish_dal_toor",
+    "name": "Toor Dal",
+    "region": null,
+    "aliases": ["dal", "tur dal", "arhar dal", "toor dal"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 4,
+    "ingredients": [
+      {
+        "ref": "lentil_pigeon_toor",
+        "grams": 30
+      },
+      {
+        "ref": "tomato",
+        "grams": 15
+      }
+    ],
+    "notes": "Homestyle dal with ghee tadka; 30g raw dal makes one 200ml katori cooked. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_dal_masoor",
+    "name": "Masoor Dal",
+    "region": null,
+    "aliases": ["masoor dal", "red lentil dal", "masur dal"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 4,
+    "ingredients": [
+      {
+        "ref": "lentil_red_masoor",
+        "grams": 30
+      },
+      {
+        "ref": "onion",
+        "grams": 15
+      },
+      {
+        "ref": "tomato",
+        "grams": 15
+      }
+    ],
+    "notes": "30g raw masoor per katori; onion-tomato tadka. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_rice_plain",
+    "name": "Plain Rice",
+    "region": null,
+    "aliases": ["rice", "steamed rice", "chawal", "bhaat"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "rice_raw_milled",
+        "grams": 50
+      }
+    ],
+    "notes": "50g raw rice yields one 200ml katori cooked; no fat."
+  },
+  {
+    "id": "dish_jeera_rice",
+    "name": "Jeera Rice",
+    "region": null,
+    "aliases": ["jeera rice", "cumin rice", "jira rice"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 5,
+    "ingredients": [
+      {
+        "ref": "rice_raw_milled",
+        "grams": 50
+      }
+    ],
+    "notes": "Plain rice tempered with ghee and cumin; cumin trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_khichdi",
+    "name": "Khichdi",
+    "region": null,
+    "aliases": ["khichdi", "khichri", "dal khichdi", "moong khichdi"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 5,
+    "ingredients": [
+      {
+        "ref": "rice_raw_milled",
+        "grams": 30
+      },
+      {
+        "ref": "lentil_green_moong",
+        "grams": 20
+      }
+    ],
+    "notes": "Soft rice-moong khichdi with ghee; turmeric trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_upma",
+    "name": "Upma",
+    "region": "south",
+    "aliases": ["upma", "rava upma", "uppittu", "uppma"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 8,
+    "ingredients": [
+      {
+        "ref": "semolina",
+        "grams": 50
+      },
+      {
+        "ref": "onion",
+        "grams": 20
+      },
+      {
+        "ref": "peanut",
+        "grams": 5
+      }
+    ],
+    "notes": "Rava upma; mustard seeds and curry leaves trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_idli",
+    "name": "Idli",
+    "region": "south",
+    "aliases": ["idli", "idly", "idlis"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "rice_raw_milled",
+        "grams": 20
+      },
+      {
+        "ref": "lentil_black_urad",
+        "grams": 7
+      }
+    ],
+    "notes": "One medium steamed idli; 3:1 rice-urad batter, no fat."
+  },
+  {
+    "id": "dish_dosa_plain",
+    "name": "Plain Dosa",
+    "region": "south",
+    "aliases": ["dosa", "plain dosa", "sada dosa", "dosai"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 5,
+    "ingredients": [
+      {
+        "ref": "rice_raw_milled",
+        "grams": 30
+      },
+      {
+        "ref": "lentil_black_urad",
+        "grams": 10
+      }
+    ],
+    "notes": "One medium dosa; oil spread on tawa. Chutney and sambar logged separately. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_sambar",
+    "name": "Sambar",
+    "region": "south",
+    "aliases": ["sambar", "sambhar", "sambaar"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 4,
+    "ingredients": [
+      {
+        "ref": "lentil_pigeon_toor",
+        "grams": 25
+      },
+      {
+        "ref": "onion",
+        "grams": 15
+      },
+      {
+        "ref": "tomato",
+        "grams": 15
+      },
+      {
+        "ref": "carrot",
+        "grams": 15
+      },
+      {
+        "ref": "tamarind",
+        "grams": 5
+      }
+    ],
+    "notes": "Thin vegetable sambar; drumstick and gourds vary by home, carrot used as stand-in vegetable. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_rajma",
+    "name": "Rajma",
+    "region": "punjabi",
+    "aliases": ["rajma", "rajma masala", "kidney bean curry"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 6,
+    "ingredients": [
+      {
+        "ref": "kidney_bean_rajma",
+        "grams": 35
+      },
+      {
+        "ref": "onion",
+        "grams": 25
+      },
+      {
+        "ref": "tomato",
+        "grams": 30
+      }
+    ],
+    "notes": "35g raw rajma per katori of curry with gravy. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_chole",
+    "name": "Chole",
+    "region": "punjabi",
+    "aliases": ["chole", "chana masala", "chhole", "chole masala"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 7,
+    "ingredients": [
+      {
+        "ref": "chickpea_white",
+        "grams": 35
+      },
+      {
+        "ref": "onion",
+        "grams": 25
+      },
+      {
+        "ref": "tomato",
+        "grams": 30
+      }
+    ],
+    "notes": "35g raw kabuli chana per katori of curry. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_palak_paneer",
+    "name": "Palak Paneer",
+    "region": "punjabi",
+    "aliases": ["palak paneer", "saag paneer", "spinach paneer"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 6,
+    "ingredients": [
+      {
+        "ref": "spinach",
+        "grams": 100
+      },
+      {
+        "ref": "paneer",
+        "grams": 50
+      },
+      {
+        "ref": "onion",
+        "grams": 15
+      },
+      {
+        "ref": "tomato",
+        "grams": 15
+      },
+      {
+        "ref": "cream",
+        "grams": 10
+      }
+    ],
+    "notes": "Homestyle, light cream; restaurant versions carry more fat. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_paneer_butter_masala",
+    "name": "Paneer Butter Masala",
+    "region": "punjabi",
+    "aliases": ["paneer butter masala", "pbm", "paneer makhani", "butter paneer"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 10,
+    "ingredients": [
+      {
+        "ref": "paneer",
+        "grams": 60
+      },
+      {
+        "ref": "tomato",
+        "grams": 60
+      },
+      {
+        "ref": "onion",
+        "grams": 20
+      },
+      {
+        "ref": "cream",
+        "grams": 15
+      },
+      {
+        "ref": "cashew",
+        "grams": 8
+      },
+      {
+        "ref": "sugar",
+        "grams": 3
+      }
+    ],
+    "notes": "Home version; restaurant gravies run 1.5-2x the butter and cream. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_aloo_sabzi_dry",
+    "name": "Aloo Sabzi (dry)",
+    "region": null,
+    "aliases": ["aloo sabzi", "sukhi aloo", "jeera aloo", "batata nu shaak"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 6,
+    "ingredients": [
+      {
+        "ref": "potato",
+        "grams": 120
+      }
+    ],
+    "notes": "Dry-fried potato sabzi; turmeric and trace spices omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_bhindi_sabzi",
+    "name": "Bhindi Sabzi",
+    "region": null,
+    "aliases": ["bhindi", "bhindi fry", "okra sabzi", "bhindi masala"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 8,
+    "ingredients": [
+      {
+        "ref": "okra",
+        "grams": 100
+      },
+      {
+        "ref": "onion",
+        "grams": 15
+      }
+    ],
+    "notes": "Bhindi absorbs oil; 8ml is a lean home baseline. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_curd",
+    "name": "Curd / Dahi",
+    "region": null,
+    "aliases": ["curd", "dahi", "yogurt", "yoghurt"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "curd",
+        "grams": 150
+      }
+    ],
+    "notes": "Plain curd from toned milk, unsweetened."
+  },
+  {
+    "id": "dish_egg_boiled",
+    "name": "Boiled Egg",
+    "region": null,
+    "aliases": ["boiled egg", "uble ande", "anda", "hard boiled egg"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "egg_hen",
+        "grams": 50
+      }
+    ],
+    "notes": "One whole medium egg, no fat used."
+  },
+  {
+    "id": "dish_egg_omelette",
+    "name": "Egg Omelette (2 eggs)",
+    "region": null,
+    "aliases": ["omelette", "omelet", "anda omelette", "masala omelette"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 5,
+    "ingredients": [
+      {
+        "ref": "egg_hen",
+        "grams": 100
+      },
+      {
+        "ref": "onion",
+        "grams": 15
+      },
+      {
+        "ref": "tomato",
+        "grams": 15
+      }
+    ],
+    "notes": "Two-egg masala omelette; one piece equals the whole omelette. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_chicken_curry",
+    "name": "Chicken Curry",
+    "region": null,
+    "aliases": ["chicken curry", "chicken masala", "murgh curry", "home chicken curry"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 10,
+    "ingredients": [
+      {
+        "ref": "chicken_meat",
+        "grams": 100
+      },
+      {
+        "ref": "onion",
+        "grams": 40
+      },
+      {
+        "ref": "tomato",
+        "grams": 40
+      }
+    ],
+    "notes": "100g raw boneless chicken per katori with gravy; homestyle onion-tomato base. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_veg_biryani",
+    "name": "Veg Biryani",
+    "region": null,
+    "aliases": ["veg biryani", "vegetable biryani", "veg dum biryani"],
+    "default_unit": "plate",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 20,
+    "ingredients": [
+      {
+        "ref": "rice_raw_milled",
+        "grams": 90
+      },
+      {
+        "ref": "carrot",
+        "grams": 30
+      },
+      {
+        "ref": "beans_french",
+        "grams": 30
+      },
+      {
+        "ref": "peas_green",
+        "grams": 20
+      },
+      {
+        "ref": "potato",
+        "grams": 30
+      },
+      {
+        "ref": "onion",
+        "grams": 30
+      },
+      {
+        "ref": "curd",
+        "grams": 30
+      }
+    ],
+    "notes": "One full plate; whole spices trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_chicken_biryani",
+    "name": "Chicken Biryani",
+    "region": null,
+    "aliases": ["chicken biryani", "biryani", "murgh biryani", "chicken dum biryani"],
+    "default_unit": "plate",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 20,
+    "ingredients": [
+      {
+        "ref": "rice_raw_milled",
+        "grams": 90
+      },
+      {
+        "ref": "chicken_meat",
+        "grams": 150
+      },
+      {
+        "ref": "onion",
+        "grams": 40
+      },
+      {
+        "ref": "curd",
+        "grams": 30
+      }
+    ],
+    "notes": "One full plate, 150g raw chicken; restaurant versions carry more fat. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_poori",
+    "name": "Poori",
+    "region": null,
+    "aliases": ["poori", "puri", "pooris"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 6,
+    "ingredients": [
+      {
+        "ref": "wheat_flour_whole",
+        "grams": 25
+      }
+    ],
+    "notes": "One medium deep-fried poori; 6g is absorbed frying oil. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_paratha_plain",
+    "name": "Plain Paratha",
+    "region": null,
+    "aliases": ["paratha", "plain paratha", "parantha", "tawa paratha"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 8,
+    "ingredients": [
+      {
+        "ref": "wheat_flour_whole",
+        "grams": 40
+      }
+    ],
+    "notes": "Layered tawa paratha; oil in dough plus roasting. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_paratha_aloo",
+    "name": "Aloo Paratha",
+    "region": "punjabi",
+    "aliases": ["aloo paratha", "aloo parantha", "stuffed paratha"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 10,
+    "ingredients": [
+      {
+        "ref": "wheat_flour_whole",
+        "grams": 40
+      },
+      {
+        "ref": "potato",
+        "grams": 60
+      }
+    ],
+    "notes": "One stuffed paratha; butter topping logged separately. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_maggi",
+    "name": "Maggi",
+    "region": null,
+    "aliases": ["maggi", "maggie", "instant noodles", "noodles"],
+    "default_unit": "plate",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "noodles_instant",
+        "grams": 70
+      }
+    ],
+    "notes": "One 70g masala pack cooked in water, tastemaker included in pack weight; noodles_instant maps to a packaged-food entry, not IFCT raw."
+  },
+  {
+    "id": "dish_bread_white",
+    "name": "White Bread Slice",
+    "region": null,
+    "aliases": ["bread", "white bread", "bread slice", "toast"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "bread_white",
+        "grams": 25
+      }
+    ],
+    "notes": "One standard sandwich-loaf slice, untoasted, no butter."
+  },
+  {
+    "id": "dish_banana",
+    "name": "Banana",
+    "region": null,
+    "aliases": ["banana", "kela", "kele"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "banana",
+        "grams": 100
+      }
+    ],
+    "notes": "One medium banana, edible portion without peel."
+  },
+  {
+    "id": "dish_apple",
+    "name": "Apple",
+    "region": null,
+    "aliases": ["apple", "seb"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "apple",
+        "grams": 130
+      }
+    ],
+    "notes": "One medium apple, edible portion with skin, without core."
+  },
+  {
+    "id": "dish_samosa",
+    "name": "Samosa",
+    "region": null,
+    "aliases": ["samosa", "samosas", "aloo samosa"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "wheat_flour_refined",
+        "grams": 30
+      },
+      {
+        "ref": "potato",
+        "grams": 60
+      },
+      {
+        "ref": "peas_green",
+        "grams": 10
+      },
+      {
+        "ref": "oil_sunflower",
+        "grams": 14
+      }
+    ],
+    "notes": "One medium street samosa; 14g oil covers dough shortening plus frying absorption."
+  },
+  {
+    "id": "dish_vada_pav",
+    "name": "Vada Pav",
+    "region": null,
+    "aliases": ["vada pav", "wada pav", "vada pao", "batata vada pav"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "bread_white",
+        "grams": 40
+      },
+      {
+        "ref": "potato",
+        "grams": 80
+      },
+      {
+        "ref": "gram_flour_besan",
+        "grams": 15
+      },
+      {
+        "ref": "oil_sunflower",
+        "grams": 10
+      }
+    ],
+    "notes": "One pav with one batata vada; dry garlic chutney trace omitted; pav mapped to bread_white."
+  },
+  {
+    "id": "dish_pav_bhaji",
+    "name": "Pav Bhaji",
+    "region": null,
+    "aliases": ["pav bhaji", "pao bhaji", "bhaji pav"],
+    "default_unit": "plate",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 20,
+    "ingredients": [
+      {
+        "ref": "bread_white",
+        "grams": 80
+      },
+      {
+        "ref": "potato",
+        "grams": 100
+      },
+      {
+        "ref": "tomato",
+        "grams": 60
+      },
+      {
+        "ref": "onion",
+        "grams": 40
+      },
+      {
+        "ref": "peas_green",
+        "grams": 30
+      },
+      {
+        "ref": "capsicum",
+        "grams": 20
+      }
+    ],
+    "notes": "One plate with 2 pav; home baseline butter, street versions use far more. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_dhokla",
+    "name": "Dhokla",
+    "region": "gujarati",
+    "aliases": ["dhokla", "khaman", "khaman dhokla", "dhokra"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 4,
+    "ingredients": [
+      {
+        "ref": "gram_flour_besan",
+        "grams": 25
+      },
+      {
+        "ref": "sugar",
+        "grams": 5
+      }
+    ],
+    "notes": "Khaman-style besan dhokla, one ~50g steamed piece; oil covers batter plus tempering. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_thepla",
+    "name": "Thepla",
+    "region": "gujarati",
+    "aliases": ["thepla", "methi thepla", "dhebra"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 6,
+    "ingredients": [
+      {
+        "ref": "wheat_flour_whole",
+        "grams": 30
+      },
+      {
+        "ref": "fenugreek_leaves",
+        "grams": 10
+      },
+      {
+        "ref": "curd",
+        "grams": 5
+      }
+    ],
+    "notes": "Methi thepla; oil in dough plus roasting. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_sev",
+    "name": "Sev",
+    "region": null,
+    "aliases": ["sev", "besan sev", "nylon sev", "namkeen sev"],
+    "default_unit": "g",
+    "default_qty": 30,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "gram_flour_besan",
+        "grams": 22
+      },
+      {
+        "ref": "oil_sunflower",
+        "grams": 10
+      }
+    ],
+    "notes": "30g snack portion, store-bought; decomposed as besan plus absorbed frying oil."
+  },
+  {
+    "id": "dish_papad",
+    "name": "Papad",
+    "region": null,
+    "aliases": ["papad", "papadum", "appalam", "roasted papad"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "lentil_black_urad",
+        "grams": 12
+      }
+    ],
+    "notes": "One roasted urad papad, not fried; fried papad absorbs ~5g oil extra."
+  },
+  {
+    "id": "dish_chaas",
+    "name": "Buttermilk / Chaas",
+    "region": null,
+    "aliases": ["chaas", "buttermilk", "chhaas", "mattha"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "curd",
+        "grams": 50
+      }
+    ],
+    "notes": "Thin salted chaas, 50g curd diluted to ~200ml; unsweetened."
+  },
+  {
+    "id": "dish_chai",
+    "name": "Masala Chai",
+    "region": null,
+    "aliases": ["chai", "tea", "masala chai", "cutting chai"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "milk_toned",
+        "grams": 100
+      },
+      {
+        "ref": "sugar",
+        "grams": 10
+      },
+      {
+        "ref": "tea_leaves",
+        "grams": 2
+      }
+    ],
+    "notes": "One ~150ml cup, half milk, 2 tsp sugar; masala trace omitted."
+  },
+  {
+    "id": "dish_masala_dosa",
+    "name": "Masala Dosa",
+    "region": "south",
+    "aliases": ["masala dosa", "masale dose", "mysore masala dosa"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 8,
+    "ingredients": [
+      {
+        "ref": "rice_raw_milled",
+        "grams": 30
+      },
+      {
+        "ref": "lentil_black_urad",
+        "grams": 10
+      },
+      {
+        "ref": "potato",
+        "grams": 80
+      },
+      {
+        "ref": "onion",
+        "grams": 20
+      }
+    ],
+    "notes": "Plain dosa plus potato palya filling; chutney and sambar logged separately. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_medu_vada",
+    "name": "Medu Vada",
+    "region": "south",
+    "aliases": ["medu vada", "vada", "urad vada", "garelu"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 8,
+    "ingredients": [
+      {
+        "ref": "lentil_black_urad",
+        "grams": 25
+      }
+    ],
+    "notes": "One deep-fried vada; 8g absorbed frying oil. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_curd_rice",
+    "name": "Curd Rice",
+    "region": "south",
+    "aliases": ["curd rice", "thayir sadam", "daddojanam", "mosaranna"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 3,
+    "ingredients": [
+      {
+        "ref": "rice_raw_milled",
+        "grams": 40
+      },
+      {
+        "ref": "curd",
+        "grams": 100
+      },
+      {
+        "ref": "milk_toned",
+        "grams": 20
+      }
+    ],
+    "notes": "Tempered curd rice; mustard and curry leaves trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_egg_bhurji",
+    "name": "Egg Bhurji",
+    "region": null,
+    "aliases": ["egg bhurji", "anda bhurji", "egg burji", "bhurji"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 8,
+    "ingredients": [
+      {
+        "ref": "egg_hen",
+        "grams": 100
+      },
+      {
+        "ref": "onion",
+        "grams": 30
+      },
+      {
+        "ref": "tomato",
+        "grams": 30
+      }
+    ],
+    "notes": "Two-egg bhurji with onion-tomato masala. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_veg_sandwich",
+    "name": "Veg Sandwich",
+    "region": null,
+    "aliases": ["veg sandwich", "bombay sandwich", "sandwich", "toast sandwich"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 10,
+    "ingredients": [
+      {
+        "ref": "bread_white",
+        "grams": 50
+      },
+      {
+        "ref": "potato",
+        "grams": 30
+      },
+      {
+        "ref": "cucumber",
+        "grams": 25
+      },
+      {
+        "ref": "tomato",
+        "grams": 25
+      },
+      {
+        "ref": "onion",
+        "grams": 15
+      }
+    ],
+    "notes": "Bombay-style two-slice toasted sandwich; green chutney trace omitted, no cheese. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_khakhra",
+    "name": "Khakhra",
+    "region": "gujarati",
+    "aliases": ["khakhra", "khakra", "methi khakhra"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "wheat_flour_whole",
+        "grams": 15
+      },
+      {
+        "ref": "oil_sunflower",
+        "grams": 2
+      }
+    ],
+    "notes": "One store-bought roasted khakhra (~15g)."
+  },
+  {
+    "id": "dish_bhel_puri",
+    "name": "Bhel Puri",
+    "region": null,
+    "aliases": ["bhel", "bhel puri", "bhelpuri", "sukha bhel"],
+    "default_unit": "plate",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "rice_puffed",
+        "grams": 40
+      },
+      {
+        "ref": "gram_flour_besan",
+        "grams": 7
+      },
+      {
+        "ref": "wheat_flour_refined",
+        "grams": 10
+      },
+      {
+        "ref": "oil_sunflower",
+        "grams": 6
+      },
+      {
+        "ref": "onion",
+        "grams": 20
+      },
+      {
+        "ref": "potato",
+        "grams": 30
+      },
+      {
+        "ref": "tomato",
+        "grams": 20
+      },
+      {
+        "ref": "tamarind",
+        "grams": 8
+      },
+      {
+        "ref": "sugar",
+        "grams": 5
+      }
+    ],
+    "notes": "Street plate; sev and crushed puri decomposed into besan, maida, and frying oil; chutneys approximated as tamarind plus sugar."
+  },
+  {
+    "id": "dish_besan_chilla",
+    "name": "Besan Chilla",
+    "region": null,
+    "aliases": ["chilla", "cheela", "besan cheela", "pudla"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 5,
+    "ingredients": [
+      {
+        "ref": "gram_flour_besan",
+        "grams": 30
+      },
+      {
+        "ref": "onion",
+        "grams": 15
+      },
+      {
+        "ref": "tomato",
+        "grams": 10
+      }
+    ],
+    "notes": "One medium savoury besan pancake. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_veg_fried_rice",
+    "name": "Veg Fried Rice",
+    "region": null,
+    "aliases": ["fried rice", "veg fried rice", "chinese fried rice"],
+    "default_unit": "plate",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 12,
+    "ingredients": [
+      {
+        "ref": "rice_raw_milled",
+        "grams": 80
+      },
+      {
+        "ref": "carrot",
+        "grams": 25
+      },
+      {
+        "ref": "beans_french",
+        "grams": 25
+      },
+      {
+        "ref": "cabbage",
+        "grams": 25
+      },
+      {
+        "ref": "capsicum",
+        "grams": 20
+      },
+      {
+        "ref": "onion",
+        "grams": 20
+      }
+    ],
+    "notes": "Indo-Chinese style; soy sauce trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+  },
+  {
+    "id": "dish_lassi",
+    "name": "Sweet Lassi",
+    "region": "punjabi",
+    "aliases": ["lassi", "sweet lassi", "meethi lassi"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": false,
+    "cooking_fat_ml": null,
+    "ingredients": [
+      {
+        "ref": "curd",
+        "grams": 150
+      },
+      {
+        "ref": "sugar",
+        "grams": 20
+      }
+    ],
+    "notes": "One ~200ml glass, curd blended with water and sugar; no malai topping."
+  }
+]
