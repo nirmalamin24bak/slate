@@ -13,7 +13,7 @@ import { PlusBadge } from './PlusBadge';
 
 // FLAG(nirmal): share copy + App Store link — final URL doesn't exist until
 // the listing does. Plain sentence, no marketing voice, per brand/BRAND-VOICE.
-const SHARE_MESSAGE = 'Slate — a calorie journal you type into. https://slate.app';
+const SHARE_MESSAGE = 'Slate. A calorie journal you type into. https://slate.app';
 
 interface DrawerProps {
   visible: boolean;

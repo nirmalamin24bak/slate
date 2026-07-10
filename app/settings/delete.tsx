@@ -48,7 +48,7 @@ export default function DeleteData() {
           can&apos;t be undone.
         </Text>
         <Text style={[type.label, styles.note, { color: colors.inkMute }]}>
-          A Slate Plus subscription stays with your Apple ID and isn&apos;t deleted here — manage it
+          A Slate Plus subscription stays with your Apple ID and isn&apos;t deleted here. Manage it
           in the App Store.
         </Text>
 

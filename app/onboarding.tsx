@@ -182,7 +182,7 @@ export default function Onboarding() {
           <>
             <Text style={[type.title, { color: colors.ink }]}>Before anything else</Text>
             <Text style={[type.body, styles.gap, { color: colors.ink }]}>
-              Slate collects your age, sex, height, weight, and the food you write — to compute
+              Slate collects your age, sex, height, weight, and the food you write. To compute
               calories, and for nothing else.
             </Text>
             <Text style={[type.body, styles.gap, { color: colors.ink }]}>
@@ -482,7 +482,7 @@ export default function Onboarding() {
               <Text style={[type.body, { color: colors.ink }]}>people.</Text>
             </View>
             <Text style={[type.label, styles.gap, { color: colors.inkMute }]}>
-              Chai & coffee — sugar
+              Chai & coffee. Sugar
             </Text>
             <Segmented
               options={[0, 1, 2] as const}

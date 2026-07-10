@@ -227,7 +227,7 @@ export default function Body() {
               onChangeText={setKg}
               onEndEditing={() => void persist()}
               keyboardType="decimal-pad"
-              placeholder={weightAssumed ? '—' : undefined}
+              placeholder={weightAssumed ? '_' : undefined}
               placeholderTextColor={colors.inkMute}
               accessibilityLabel="Weight in kilograms"
               style={[
