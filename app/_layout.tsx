@@ -1,15 +1,50 @@
+import {
+  InterTight_500Medium,
+  InterTight_700Bold,
+  InterTight_800ExtraBold,
+} from '@expo-google-fonts/inter-tight';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 
-// Root navigation shell. Screens are files under app/.
-// Header is hidden globally; the journal supplies its own minimal chrome
-// (spec/02 §B — two circular buttons only). Real theming lands with the
-// theme module (Phase 0, todo 5).
+import { useTheme } from '@/theme';
+
+// Keep the native splash up until fonts are ready. The journal must never
+// flash a fallback face — numbers in the wrong font jitter when Inter Tight
+// swaps in (spec/03: tabular figures, no jitter).
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
+  const theme = useTheme();
+  // Keys are the names src/theme/typography.ts refers to. Loading mechanism
+  // can change (config plugin, custom TTFs); the names must not.
+  const [fontsLoaded, fontError] = useFonts({
+    'InterTight-Medium': InterTight_500Medium,
+    'InterTight-Bold': InterTight_700Bold,
+    'InterTight-ExtraBold': InterTight_800ExtraBold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null; // splash is still visible
+  }
+
   return (
     <>
-      <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }} />
+      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.colors.bg },
+        }}
+      />
     </>
   );
 }

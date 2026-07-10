@@ -1,35 +1,35 @@
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Journal (home) — placeholder scaffold only.
+import { screenPadding, spacing, type, useTheme } from '@/theme';
+
+// Journal (home) — Phase 0 scaffold.
 // The real multiline editor, line state machine, shimmer, totals, and
-// summary card are built in Phase 3 (spec/02 §B, spec/09). This exists so
-// the app boots to the journal route with correct background per spec/03.
+// summary card are built in Phase 3 (spec/02 §B, spec/09). This screen
+// exists so the app boots to the journal route with the correct tokens,
+// and to prove tabular figures on a live number.
 export default function Journal() {
+  const { colors } = useTheme();
+
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Today</Text>
+        <Text style={[type.title, { color: colors.ink }]}>Today</Text>
+        <Text style={[type.number, styles.total, { color: colors.inkMute }]}>0 cals</Text>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // Colours inlined here are the spec/03 light tokens (bg, ink). They will be
-  // replaced by the typed theme module in Phase 0 (todo 5); no component should
-  // carry raw hex once that lands.
   screen: {
     flex: 1,
-    backgroundColor: '#F7F7F5', // bg
   },
   header: {
-    paddingHorizontal: 24, // lg
-    paddingTop: 24,
+    paddingHorizontal: screenPadding,
+    paddingTop: spacing.lg,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.56, // -0.02em at 28px
-    color: '#111214', // ink
+  total: {
+    marginTop: spacing.xs,
   },
 });
