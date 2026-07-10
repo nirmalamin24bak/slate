@@ -1,43 +1,62 @@
-// The bottom sheet behind the summary card (spec/02 §B). Rows route to
-// screens that land in Phase 5; until then they render but do nothing —
-// the layout contract is Phase 3's, the destinations are not.
+// The bottom sheet behind the summary card (spec/02 §B). Everything except
+// food is off by default; these rows are how a user turns the rest on. Plus
+// rows route free users to the paywall instead of the destination.
 
+import { useRouter, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { accent, radius, spacing, type, useTheme } from '@/theme';
+import { usePlus } from '@/lib/plus';
+import { spacing, type, useTheme } from '@/theme';
 
+import { PlusBadge } from './PlusBadge';
 import { Sheet } from './Sheet';
 
-const ROWS = [
-  { label: 'Your info & goals', plus: false },
-  { label: 'Your kitchen', plus: true },
-  { label: 'Customize display', plus: false },
-  { label: 'Fiber and sugar', plus: true },
-  { label: 'What you can write', plus: false },
-] as const;
-
-function PlusBadge() {
-  return (
-    <View style={styles.plusBadge}>
-      <Text style={[type.caption, { color: '#FFFFFF' }]}>Plus</Text>
-    </View>
-  );
+interface OptionRow {
+  label: string;
+  plus: boolean;
+  route: string;
 }
+
+const ROWS: readonly OptionRow[] = [
+  { label: 'Your info & goals', plus: false, route: '/settings/info-goals' },
+  { label: 'Your kitchen', plus: true, route: '/settings/kitchen' },
+  { label: 'Customize display', plus: false, route: '/settings/display' },
+  { label: 'Fiber and sugar', plus: true, route: '/settings/display' },
+  { label: 'What you can write', plus: false, route: '/settings/hub' },
+];
 
 export function OptionsSheet({ visible, onClose }: { visible: boolean; onClose(): void }) {
   const { colors } = useTheme();
+  const router = useRouter();
+  const plus = usePlus();
+
+  const go = (row: Pick<OptionRow, 'plus' | 'route'>) => {
+    onClose();
+    const target = row.plus && !plus ? '/paywall' : row.route;
+    router.push(target as Href);
+  };
+
   return (
     <Sheet visible={visible} onClose={onClose}>
-      <Pressable style={styles.row} accessibilityRole="button">
+      <Pressable
+        style={styles.row}
+        accessibilityRole="button"
+        onPress={() => go({ plus: true, route: '/chat' })}
+      >
         <Text style={[type.body, { color: colors.ink }]}>Chat about your day →</Text>
-        <PlusBadge />
+        {!plus && <PlusBadge />}
       </Pressable>
       <View style={[styles.divider, { backgroundColor: colors.hairline }]} />
       {ROWS.map((row) => (
-        <Pressable key={row.label} style={styles.row} accessibilityRole="button">
+        <Pressable
+          key={row.label}
+          style={styles.row}
+          accessibilityRole="button"
+          onPress={() => go(row)}
+        >
           <Text style={[type.body, { color: colors.ink }]}>{row.label}</Text>
           <View style={styles.rowRight}>
-            {row.plus && <PlusBadge />}
+            {row.plus && !plus && <PlusBadge />}
             <Text style={[type.body, { color: colors.inkMute }]}>›</Text>
           </View>
         </Pressable>
@@ -61,11 +80,5 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     marginVertical: spacing.xs,
-  },
-  plusBadge: {
-    backgroundColor: accent,
-    borderRadius: radius.chip,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
   },
 });
