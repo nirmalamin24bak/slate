@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Slate",
+    "slug": "slate",
+    "scheme": "slate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#F7F7F5",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sonalsystems.slate"
+    },
+    "android": {
+      "package": "com.sonalsystems.slate",
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F7F5",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-font",
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

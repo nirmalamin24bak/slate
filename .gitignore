@@ -1,0 +1,60 @@
+# === Secrets — never commit ===
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.keystore
+*.mobileprovision
+*.p8
+*.p12
+google-services.json
+GoogleService-Info.plist
+
+# === Node ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# === Expo ===
+.expo/
+.expo-shared/
+dist/
+web-build/
+expo-env.d.ts
+
+# === Native builds ===
+ios/
+android/
+*.ipa
+*.apk
+*.aab
+*.dSYM.zip
+*.dSYM
+
+# === Metro / bundler ===
+.metro-health-check*
+*.jsbundle
+
+# === Supabase (local) ===
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# === Test / coverage ===
+coverage/
+.nyc_output/
+
+# === Editor / OS ===
+.DS_Store
+Thumbs.db
+*.log
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# === TypeScript build ===
+*.tsbuildinfo
