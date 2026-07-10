@@ -2,7 +2,7 @@
 // editor: type a line, hit return, a shimmer runs, a number lands, the cursor
 // is already on the next line. No submit button. No confirmation. No modal.
 
-import { Redirect, type Href } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import * as Network from 'expo-network';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DayScrubber } from '@/components/DayScrubber';
 import { DetailSheet } from '@/components/DetailSheet';
+import { Drawer } from '@/components/Drawer';
 import { JournalLine } from '@/components/JournalLine';
 import { OptionsSheet } from '@/components/OptionsSheet';
 import { SuggestionStrip, type Suggestion } from '@/components/SuggestionStrip';
@@ -28,6 +29,7 @@ import { getProfile } from '@/db/profileRepo';
 import type { ProfileRow } from '@/db/rows';
 import { dayKey, type DayLine, type DayView } from '@/journal';
 import { useOnboardingGate } from '@/lib/onboardingState';
+import { takePendingLine } from '@/lib/pendingLine';
 import { services, type Services } from '@/lib/services';
 import { iconButtonSize, radius, screenPadding, spacing, type, useTheme } from '@/theme';
 
@@ -42,10 +44,14 @@ interface WeightConfirm {
 export default function Journal() {
   const { colors } = useTheme();
   const gate = useOnboardingGate();
+  const router = useRouter();
+  // History and the scrubber's "View all history" land here with ?day=.
+  const params = useLocalSearchParams<{ day?: string }>();
 
   const [svc, setSvc] = useState<Services | null>(null);
   const [today, setToday] = useState(() => dayKey(new Date()));
   const [selectedDay, setSelectedDay] = useState(today);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [view, setView] = useState<DayView | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -82,6 +88,22 @@ export default function Journal() {
 
   // store 'change' events bump a tick; the effect below re-reads the day
   const [changeTick, setChangeTick] = useState(0);
+
+  // On focus: History (and the scrubber's "View all history") route back here
+  // with ?day=, and a teach-sheet example / saved food / barcode hit parks one
+  // line to write. Both are navigation-driven, so the focus effect — not a
+  // render effect — is the sanctioned place to consume them.
+  useFocusEffect(
+    useCallback(() => {
+      const day =
+        typeof params.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(params.day)
+          ? params.day
+          : null;
+      if (day) setSelectedDay(day);
+      const line = takePendingLine();
+      if (line && svc) void svc.store.addLine(line, day ?? selectedDay);
+    }, [params.day, svc, selectedDay]),
+  );
 
   // boot: services, store events, connectivity-driven drain, sync tick
   useEffect(() => {
@@ -159,6 +181,7 @@ export default function Journal() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Menu"
+          onPress={() => setDrawerOpen(true)}
           style={[styles.iconBtn, { backgroundColor: colors.fill }]}
         >
           <Text style={[type.body, { color: colors.ink }]}>=</Text>
@@ -166,6 +189,7 @@ export default function Journal() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Scanner"
+          onPress={() => router.push('/scanner' as Href)}
           style={[styles.iconBtn, { backgroundColor: colors.fill }]}
         >
           <Text style={[type.body, { color: colors.ink }]}>⛶</Text>
@@ -305,6 +329,7 @@ export default function Journal() {
         )}
       </KeyboardAvoidingView>
 
+      <Drawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <OptionsSheet visible={optionsOpen} onClose={() => setOptionsOpen(false)} />
       <DetailSheet
         key={detail?.entry.id ?? 'none'}
