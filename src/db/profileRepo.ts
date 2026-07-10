@@ -121,6 +121,16 @@ export async function upsertWeight(adapter: SqlAdapter, row: WeightRow): Promise
   );
 }
 
+/** Non-deleted weights, oldest first — Stats' line and the export bundle. */
+export async function listWeights(adapter: SqlAdapter, userId: string): Promise<WeightRow[]> {
+  return adapter.all<WeightRow>(
+    `SELECT * FROM weights
+     WHERE user_id = ? AND deleted_at IS NULL
+     ORDER BY log_date ASC`,
+    [userId],
+  );
+}
+
 export async function listDirtyWeights(adapter: SqlAdapter): Promise<WeightRow[]> {
   return adapter.all<WeightRow>('SELECT * FROM weights WHERE dirty = 1');
 }
