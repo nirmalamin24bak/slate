@@ -56,6 +56,7 @@ export function Drawer({ visible, onClose }: DrawerProps) {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.scrimWrap}>
         <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Close menu"
           onPress={onClose}
           style={[StyleSheet.absoluteFill, styles.scrim]}

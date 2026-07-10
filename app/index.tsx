@@ -217,7 +217,11 @@ export default function Journal() {
           }}
           contentContainerStyle={styles.scroll}
         >
-          <Pressable onPress={() => setScrubbing((s) => !s)} style={styles.header}>
+          <Pressable
+            onPress={() => setScrubbing((s) => !s)}
+            accessibilityRole="button"
+            style={styles.header}
+          >
             <Text style={[type.title, { color: colors.ink }]}>{title}</Text>
             {!hideCalories && view && (
               <Text {...numberProps} style={[type.number, styles.total, { color: colors.inkMute }]}>

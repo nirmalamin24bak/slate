@@ -98,6 +98,8 @@ export function RangeCalendar({ start, end, onChange }: RangeCalendarProps) {
             <Pressable
               key={cell.key}
               accessibilityRole="button"
+              accessibilityLabel={cell.key}
+              accessibilityState={{ selected: cell.key === start || cell.key === end }}
               onPress={() => tap(cell.key as string)}
               style={[
                 styles.cell,

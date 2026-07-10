@@ -77,7 +77,11 @@ export function DetailSheet({
       />
 
       {display.kind === 'retry' && (
-        <Pressable onPress={() => onRetry(entry.id)} accessibilityRole="button">
+        <Pressable
+          onPress={() => onRetry(entry.id)}
+          accessibilityRole="button"
+          accessibilityLabel="Not sure what this is. Try adding detail? Retry"
+        >
           <Text style={[type.label, styles.rowGap, { color: colors.inkMute }]}>
             Not sure what this is. Try adding detail? ↻
           </Text>
