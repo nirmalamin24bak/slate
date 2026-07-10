@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Test
+        run: npx vitest run --passWithNoTests
+
+      # Fails on high/critical. Moderates stay visible in the log; the only
+      # current one is uuid<11.1.1 via expo's xcode config plugin — build-time
+      # tooling, never in the shipped bundle (see commit history).
+      - name: Audit
+        run: npm audit --audit-level=high
+
+      # No Supabase key material may ever be committed. JWTs (legacy anon /
+      # service keys), sb_secret_ / sb_publishable_ API keys, or a .env file.
+      - name: Secret scan
+        run: |
+          set -e
+          PATTERNS='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9|sb_secret_[A-Za-z0-9_-]+|sb_publishable_[A-Za-z0-9_-]+|SUPABASE_SERVICE_ROLE_KEY=.+[A-Za-z0-9]'
+          if git grep -nE "$PATTERNS" -- ':!package-lock.json' ':!.github/workflows/ci.yml'; then
+            echo '::error::Potential secret committed. Remove it and rotate the key.'
+            exit 1
+          fi
+          if [ -f .env ]; then
+            echo '::error::.env is present in the repository. It must never be committed.'
+            exit 1
+          fi
+          echo 'Secret scan clean.'
