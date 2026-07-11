@@ -31,6 +31,7 @@ import { dayKey, type DayLine, type DayView } from '@/journal';
 import { useOnboardingGate } from '@/lib/onboardingState';
 import { BOUNDS, parseBounded } from '@/lib/parseNumeric';
 import { takePendingLine } from '@/lib/pendingLine';
+import { reportError } from '@/lib/report';
 import { services, type Services } from '@/lib/services';
 import {
   iconButtonSize,
@@ -123,22 +124,24 @@ export default function Journal() {
     let networkSub: { remove(): void } | null = null;
     let timer: ReturnType<typeof setInterval> | null = null;
 
-    services().then((s) => {
-      if (disposed) return;
-      setSvc(s);
-      unsubscribe = s.store.on((event) => {
-        if (event.type === 'change') setChangeTick((t) => t + 1);
-        if (event.type === 'weightConfirm') setWeightConfirm(event);
-        if (event.type === 'needsWeight') setNeedsWeight(true);
-      });
-      networkSub = Network.addNetworkStateListener((state) => {
-        if (state.isInternetReachable) void s.syncTick();
-      });
-      timer = setInterval(() => {
-        setToday(dayKey(new Date())); // midnight rollover
-        void s.syncTick();
-      }, SYNC_TICK_MS);
-    });
+    services()
+      .then((s) => {
+        if (disposed) return;
+        setSvc(s);
+        unsubscribe = s.store.on((event) => {
+          if (event.type === 'change') setChangeTick((t) => t + 1);
+          if (event.type === 'weightConfirm') setWeightConfirm(event);
+          if (event.type === 'needsWeight') setNeedsWeight(true);
+        });
+        networkSub = Network.addNetworkStateListener((state) => {
+          if (state.isInternetReachable) void s.syncTick();
+        });
+        timer = setInterval(() => {
+          setToday(dayKey(new Date())); // midnight rollover
+          void s.syncTick();
+        }, SYNC_TICK_MS);
+      })
+      .catch((error: unknown) => reportError(error, { screen: 'journal', op: 'boot' }));
 
     return () => {
       disposed = true;
@@ -151,16 +154,22 @@ export default function Journal() {
   useEffect(() => {
     if (!svc) return;
     let cancelled = false;
-    load(svc, selectedDay).then((data) => {
-      if (cancelled) return;
-      setView(data.dayView);
-      setProfile(data.profileRow);
-      setSuggestions(data.suggestions);
-    });
+    load(svc, selectedDay)
+      .then((data) => {
+        if (cancelled) return;
+        setView(data.dayView);
+        setProfile(data.profileRow);
+        setSuggestions(data.suggestions);
+      })
+      .catch((error: unknown) => reportError(error, { screen: 'journal', op: 'load' }));
     return () => {
       cancelled = true;
     };
   }, [svc, selectedDay, changeTick, load]);
+
+  // Stable across renders so memoized JournalLines don't re-render on every
+  // keystroke (setDetail from useState is itself stable).
+  const openDetail = useCallback((line: DayLine) => setDetail(line), []);
 
   if (gate === 'loading') return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   // typed routes regenerate on the next `expo start`; until then, cast
@@ -255,7 +264,7 @@ export default function Journal() {
                 key={line.entry.id}
                 line={line}
                 hideCalories={hideCalories}
-                onPress={() => setDetail(line)}
+                onPress={openDetail}
               />
             ))}
           </View>

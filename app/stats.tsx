@@ -15,6 +15,7 @@ import { listDayStats, type DayStatRow } from '@/db/entriesRepo';
 import { getProfile, listWeights } from '@/db/profileRepo';
 import { addDays, dayKey } from '@/journal';
 import { usePlus } from '@/lib/plus';
+import { reportError } from '@/lib/report';
 import { services } from '@/lib/services';
 import {
   caloriesCard,
@@ -62,18 +63,20 @@ export default function Stats() {
   useEffect(() => {
     if (!plus) return;
     let mounted = true;
-    services().then(async (svc) => {
-      const [dayStats, weightRows, profile] = await Promise.all([
-        listDayStats(svc.adapter, svc.userId, range.start, range.end),
-        listWeights(svc.adapter, svc.userId),
-        getProfile(svc.adapter, svc.userId),
-      ]);
-      if (!mounted) return;
-      setStats(dayStats);
-      setWeights(weightRows.map((w) => ({ log_date: w.log_date, weight_kg: w.weight_kg })));
-      setShowFiberSugar((profile?.show_fiber_sugar ?? 0) === 1);
-      setHideCalories((profile?.hide_calories ?? 0) === 1);
-    });
+    services()
+      .then(async (svc) => {
+        const [dayStats, weightRows, profile] = await Promise.all([
+          listDayStats(svc.adapter, svc.userId, range.start, range.end),
+          listWeights(svc.adapter, svc.userId),
+          getProfile(svc.adapter, svc.userId),
+        ]);
+        if (!mounted) return;
+        setStats(dayStats);
+        setWeights(weightRows.map((w) => ({ log_date: w.log_date, weight_kg: w.weight_kg })));
+        setShowFiberSugar((profile?.show_fiber_sugar ?? 0) === 1);
+        setHideCalories((profile?.hide_calories ?? 0) === 1);
+      })
+      .catch((error: unknown) => reportError(error, { screen: 'stats' }));
     return () => {
       mounted = false;
     };

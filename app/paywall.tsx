@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { reportError } from '@/lib/report';
 import { getPlusPrices, purchasePlus, restorePurchases, type PlusPlan } from '@/lib/revenuecat';
 import {
   accent,
@@ -72,10 +73,12 @@ export default function Paywall() {
 
   useEffect(() => {
     let mounted = true;
-    getPlusPrices().then((p) => {
-      if (!mounted) return;
-      setPrices({ monthly: p.monthly ?? FALLBACK.monthly, yearly: p.yearly ?? FALLBACK.yearly });
-    });
+    getPlusPrices()
+      .then((p) => {
+        if (!mounted) return;
+        setPrices({ monthly: p.monthly ?? FALLBACK.monthly, yearly: p.yearly ?? FALLBACK.yearly });
+      })
+      .catch((error: unknown) => reportError(error, { screen: 'paywall' }));
     return () => {
       mounted = false;
     };

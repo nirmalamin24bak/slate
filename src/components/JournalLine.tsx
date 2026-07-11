@@ -5,7 +5,7 @@
 //
 // VoiceOver reads the whole line as one utterance: "2 rotis, 220 calories".
 
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { DayLine } from '@/journal';
@@ -52,13 +52,15 @@ function SettledNumber({ children }: { children: React.ReactNode }) {
 export interface JournalLineProps {
   line: DayLine;
   hideCalories: boolean;
-  onPress(): void;
+  /** receives the pressed line so the parent can pass ONE stable callback */
+  onPress(line: DayLine): void;
 }
 
-export function JournalLine({ line, hideCalories, onPress }: JournalLineProps) {
+function JournalLineImpl({ line, hideCalories, onPress }: JournalLineProps) {
   const { colors } = useTheme();
   const [width, setWidth] = useState(0);
   const { display, entry } = line;
+  const pending = display.kind === 'pending';
 
   const right = (() => {
     if (hideCalories && (display.kind === 'kcal' || display.kind === 'burn')) {
@@ -71,7 +73,7 @@ export function JournalLine({ line, hideCalories, onPress }: JournalLineProps) {
     switch (display.kind) {
       case 'kcal':
         return (
-          <SettledNumber key={`${entry.id}-${display.value}`}>
+          <SettledNumber key={entry.id}>
             <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
               {formatKcal(display.value)}
             </Text>
@@ -79,7 +81,7 @@ export function JournalLine({ line, hideCalories, onPress }: JournalLineProps) {
         );
       case 'burn':
         return (
-          <SettledNumber key={`${entry.id}-${display.value}`}>
+          <SettledNumber key={entry.id}>
             <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
               −{formatKcal(-display.value)}
             </Text>
@@ -113,11 +115,13 @@ export function JournalLine({ line, hideCalories, onPress }: JournalLineProps) {
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => onPress(line)}
       accessibilityRole="button"
       accessibilityLabel={journalLineLabel(entry.raw_text, line.display, hideCalories)}
       style={styles.row}
-      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      // width only feeds the pending Shimmer; measuring resolved lines is a
+      // wasted extra render per line on every parent update.
+      onLayout={pending ? (e) => setWidth(e.nativeEvent.layout.width) : undefined}
     >
       <View style={styles.lineRow}>
         <Text style={[type.body, styles.text, { color: colors.ink }]} numberOfLines={2}>
@@ -125,10 +129,14 @@ export function JournalLine({ line, hideCalories, onPress }: JournalLineProps) {
         </Text>
         <View style={styles.right}>{right}</View>
       </View>
-      {display.kind === 'pending' && width > 0 ? <Shimmer width={width} /> : null}
+      {pending && width > 0 ? <Shimmer width={width} /> : null}
     </Pressable>
   );
 }
+
+// Memoized: typing a new line re-renders the journal; without this every
+// existing line re-renders (and re-runs its layout cycle) on each keystroke.
+export const JournalLine = memo(JournalLineImpl);
 
 const styles = StyleSheet.create({
   row: {
