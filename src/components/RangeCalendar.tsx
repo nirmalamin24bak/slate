@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { dayKey } from '@/journal';
-import { radius, spacing, type, useTheme } from '@/theme';
+import { numberProps, radius, spacing, type, useTheme } from '@/theme';
 
 export interface RangeCalendarProps {
   start: string;
@@ -98,6 +98,8 @@ export function RangeCalendar({ start, end, onChange }: RangeCalendarProps) {
             <Pressable
               key={cell.key}
               accessibilityRole="button"
+              accessibilityLabel={cell.key}
+              accessibilityState={{ selected: cell.key === start || cell.key === end }}
               onPress={() => tap(cell.key as string)}
               style={[
                 styles.cell,
@@ -106,6 +108,7 @@ export function RangeCalendar({ start, end, onChange }: RangeCalendarProps) {
               ]}
             >
               <Text
+                {...numberProps}
                 style={[
                   type.number,
                   {

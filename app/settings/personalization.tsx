@@ -63,7 +63,7 @@ export default function Personalization() {
           style={[type.body, styles.box, { backgroundColor: colors.fill, color: colors.ink }]}
         />
         <Text style={[type.caption, styles.note, { color: colors.inkMute }]}>
-          Slate uses this to adjust its estimates. It nudges cooking assumptions — it can&apos;t
+          Slate uses this to adjust its estimates. It nudges cooking assumptions. It can&apos;t
           override the numbers behind a dish.
         </Text>
       </ScrollView>

@@ -12,7 +12,7 @@ import { accent, radius, screenPadding, spacing, type, useTheme } from '@/theme'
 
 // FLAG(nirmal): spec/07 calls this row green; spec/03 reserves the single
 // accent (indigo) and the palette has no green. Accent used — one word flips.
-const SHARE_MESSAGE = 'Slate — a calorie journal you type into. https://slate.app';
+const SHARE_MESSAGE = 'Slate. A calorie journal you type into. https://slate.app';
 const PRIVACY_URL = 'https://slate.app/privacy'; // FLAG(nirmal): final URL
 const SUPPORT_EMAIL = 'support@slate.app';
 

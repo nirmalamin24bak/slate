@@ -14,7 +14,15 @@ import { baseline, bmr } from '@/engine';
 import { dayKey } from '@/journal';
 import { dobFromAge } from '@/onboarding';
 import { services } from '@/lib/services';
-import { radius, screenPadding, spacing, type, useTheme } from '@/theme';
+import {
+  numberMaxFontScale,
+  numberProps,
+  radius,
+  screenPadding,
+  spacing,
+  type,
+  useTheme,
+} from '@/theme';
 
 const CM_PER_INCH = 2.54;
 
@@ -138,6 +146,7 @@ export default function Body() {
             onEndEditing={() => void persist()}
             keyboardType="number-pad"
             accessibilityLabel="Age in years"
+            maxFontSizeMultiplier={numberMaxFontScale}
             style={[type.number, styles.well, { backgroundColor: colors.fill, color: colors.ink }]}
           />
         </View>
@@ -169,6 +178,7 @@ export default function Body() {
                 onEndEditing={() => void persist()}
                 keyboardType="number-pad"
                 accessibilityLabel="Height in centimetres"
+                maxFontSizeMultiplier={numberMaxFontScale}
                 style={[
                   type.number,
                   styles.well,
@@ -183,6 +193,7 @@ export default function Body() {
                   onEndEditing={() => void persist()}
                   keyboardType="number-pad"
                   accessibilityLabel="Height, feet"
+                  maxFontSizeMultiplier={numberMaxFontScale}
                   style={[
                     type.number,
                     styles.well,
@@ -195,6 +206,7 @@ export default function Body() {
                   onEndEditing={() => void persist()}
                   keyboardType="number-pad"
                   accessibilityLabel="Height, inches"
+                  maxFontSizeMultiplier={numberMaxFontScale}
                   style={[
                     type.number,
                     styles.well,
@@ -230,6 +242,7 @@ export default function Body() {
               placeholder={weightAssumed ? '—' : undefined}
               placeholderTextColor={colors.inkMute}
               accessibilityLabel="Weight in kilograms"
+              maxFontSizeMultiplier={numberMaxFontScale}
               style={[
                 type.number,
                 styles.well,
@@ -250,13 +263,13 @@ export default function Body() {
           <View style={styles.numbers}>
             <View style={styles.numberRow}>
               <Text style={[type.caption, { color: colors.inkMute }]}>BMR</Text>
-              <Text style={[type.number, { color: colors.ink }]}>
+              <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
                 {Math.round(bmrKcal).toLocaleString('en-IN')}
               </Text>
             </View>
             <View style={styles.numberRow}>
               <Text style={[type.caption, { color: colors.inkMute }]}>Sedentary baseline</Text>
-              <Text style={[type.number, { color: colors.ink }]}>
+              <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
                 {Math.round(base).toLocaleString('en-IN')}
               </Text>
             </View>

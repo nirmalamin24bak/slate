@@ -9,31 +9,11 @@ import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { DayLine } from '@/journal';
-import { journalLineGap, motion, screenPadding, type, useTheme } from '@/theme';
+import { journalLineGap, motion, numberProps, screenPadding, type, useTheme } from '@/theme';
 
-import { Shimmer, useReducedMotion } from './Shimmer';
-
-function formatKcal(value: number): string {
-  return Math.round(value).toLocaleString('en-IN');
-}
-
-function accessibilityFor(line: DayLine, hideCalories: boolean): string {
-  const text = line.entry.raw_text;
-  switch (line.display.kind) {
-    case 'kcal':
-      return hideCalories ? text : `${text}, ${formatKcal(line.display.value)} calories`;
-    case 'burn':
-      return hideCalories ? text : `${text}, minus ${formatKcal(-line.display.value)} calories`;
-    case 'included':
-      return `${text}, included`;
-    case 'pending':
-      return `${text}, resolving`;
-    case 'retry':
-      return `${text}, unresolved, tap to retry`;
-    default:
-      return `${text}, logged`;
-  }
-}
+import { formatKcal, journalLineLabel } from './a11y';
+import { Shimmer } from './Shimmer';
+import { useReducedMotion } from './useReducedMotion';
 
 /** The number settle: fade in and rise 4px, 180ms (spec/03 motion #2). */
 function SettledNumber({ children }: { children: React.ReactNode }) {
@@ -82,34 +62,50 @@ export function JournalLine({ line, hideCalories, onPress }: JournalLineProps) {
 
   const right = (() => {
     if (hideCalories && (display.kind === 'kcal' || display.kind === 'burn')) {
-      return <Text style={[type.number, { color: colors.inkMute }]}>✓</Text>;
+      return (
+        <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
+          ✓
+        </Text>
+      );
     }
     switch (display.kind) {
       case 'kcal':
         return (
           <SettledNumber key={`${entry.id}-${display.value}`}>
-            <Text style={[type.number, { color: colors.ink }]}>{formatKcal(display.value)}</Text>
+            <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
+              {formatKcal(display.value)}
+            </Text>
           </SettledNumber>
         );
       case 'burn':
         return (
           <SettledNumber key={`${entry.id}-${display.value}`}>
-            <Text style={[type.number, { color: colors.inkMute }]}>
+            <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
               −{formatKcal(-display.value)}
             </Text>
           </SettledNumber>
         );
       case 'check':
-        return <Text style={[type.number, { color: colors.inkMute }]}>✓</Text>;
+        return (
+          <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
+            ✓
+          </Text>
+        );
       case 'included':
         return (
           <View style={styles.includedWrap}>
             <Text style={[type.caption, { color: colors.inkMute }]}>included</Text>
-            <Text style={[type.number, { color: colors.inkMute }]}>✓</Text>
+            <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
+              ✓
+            </Text>
           </View>
         );
       case 'retry':
-        return <Text style={[type.number, { color: colors.inkMute }]}>↻</Text>;
+        return (
+          <Text {...numberProps} style={[type.number, { color: colors.inkMute }]}>
+            ↻
+          </Text>
+        );
       default:
         return null; // pending — the shimmer below carries the state
     }
@@ -119,7 +115,7 @@ export function JournalLine({ line, hideCalories, onPress }: JournalLineProps) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityFor(line, hideCalories)}
+      accessibilityLabel={journalLineLabel(entry.raw_text, line.display, hideCalories)}
       style={styles.row}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
     >

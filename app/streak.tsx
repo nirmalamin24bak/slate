@@ -9,7 +9,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { listLoggedDates } from '@/db/entriesRepo';
 import { computeStreak, consistencyDots, dayKey, type StreakInfo } from '@/journal';
 import { services } from '@/lib/services';
-import { screenPadding, spacing, type, useTheme } from '@/theme';
+import { numberProps, screenPadding, spacing, type, useTheme } from '@/theme';
 
 const DOT_WEEKS = 8;
 
@@ -38,14 +38,14 @@ export default function Streak() {
       <ScrollView contentContainerStyle={styles.scroll}>
         {streak && (
           <>
-            <Text style={[type.heroNumber, styles.hero, { color: colors.ink }]}>
+            <Text {...numberProps} style={[type.heroNumber, styles.hero, { color: colors.ink }]}>
               {streak.current.toLocaleString('en-IN')}
             </Text>
             <Text style={[type.label, { color: colors.inkMute }]}>days</Text>
 
             <View style={styles.longestRow}>
               <Text style={[type.label, { color: colors.inkMute }]}>Longest</Text>
-              <Text style={[type.number, { color: colors.ink }]}>
+              <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
                 {streak.longest.toLocaleString('en-IN')} days
               </Text>
             </View>

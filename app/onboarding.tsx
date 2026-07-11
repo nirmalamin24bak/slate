@@ -19,6 +19,8 @@ import {
 import { completeOnboarding, loadDraft, saveDraft } from '@/lib/onboardingState';
 import { purchasePlus } from '@/lib/revenuecat';
 import {
+  numberMaxFontScale,
+  numberProps,
   primaryButtonHeight,
   radius,
   screenPadding,
@@ -182,7 +184,7 @@ export default function Onboarding() {
           <>
             <Text style={[type.title, { color: colors.ink }]}>Before anything else</Text>
             <Text style={[type.body, styles.gap, { color: colors.ink }]}>
-              Slate collects your age, sex, height, weight, and the food you write — to compute
+              Slate collects your age, sex, height, weight, and the food you write. To compute
               calories, and for nothing else.
             </Text>
             <Text style={[type.body, styles.gap, { color: colors.ink }]}>
@@ -254,7 +256,10 @@ export default function Onboarding() {
               ).map(([text, cal, negative]) => (
                 <View key={text} style={styles.exampleRow}>
                   <Text style={[type.body, { color: colors.ink }]}>{text}</Text>
-                  <Text style={[type.number, { color: negative ? colors.inkMute : colors.ink }]}>
+                  <Text
+                    {...numberProps}
+                    style={[type.number, { color: negative ? colors.inkMute : colors.ink }]}
+                  >
                     {cal}
                   </Text>
                 </View>
@@ -406,13 +411,13 @@ export default function Onboarding() {
               <View style={styles.gapXl}>
                 <View style={styles.exampleRow}>
                   <Text style={[type.label, { color: colors.inkMute }]}>BMR</Text>
-                  <Text style={[type.number, { color: colors.ink }]}>
+                  <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
                     {Math.round(preview.bmr).toLocaleString('en-IN')}
                   </Text>
                 </View>
                 <View style={styles.exampleRow}>
                   <Text style={[type.label, { color: colors.inkMute }]}>Sedentary baseline</Text>
-                  <Text style={[type.number, { color: colors.ink }]}>
+                  <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
                     {Math.round(preview.baseline).toLocaleString('en-IN')}
                   </Text>
                 </View>
@@ -461,6 +466,7 @@ export default function Onboarding() {
                 value={String(k.oilBottleDays)}
                 onChangeText={(v) => setKitchen({ oilBottleDays: Number(v) || 30 })}
                 accessibilityLabel="Days a 1 litre oil bottle lasts"
+                maxFontSizeMultiplier={numberMaxFontScale}
                 style={[
                   type.number,
                   styles.inlineField,
@@ -473,6 +479,7 @@ export default function Onboarding() {
                 value={String(k.householdSize)}
                 onChangeText={(v) => setKitchen({ householdSize: Number(v) || 4 })}
                 accessibilityLabel="People cooked for"
+                maxFontSizeMultiplier={numberMaxFontScale}
                 style={[
                   type.number,
                   styles.inlineField,
@@ -482,7 +489,7 @@ export default function Onboarding() {
               <Text style={[type.body, { color: colors.ink }]}>people.</Text>
             </View>
             <Text style={[type.label, styles.gap, { color: colors.inkMute }]}>
-              Chai & coffee — sugar
+              Chai & coffee. Sugar
             </Text>
             <Segmented
               options={[0, 1, 2] as const}
@@ -532,6 +539,7 @@ export default function Onboarding() {
                   update({ ...draft, calorieGoal: goal });
                 }}
                 accessibilityLabel="Calorie goal"
+                maxFontSizeMultiplier={numberMaxFontScale}
                 style={[type.heroNumber, styles.goalField, { color: colors.ink }]}
               />
               <Text style={[type.label, { color: colors.inkMute }]}>cals</Text>

@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { getProfile, patchProfile, type ProfilePatch } from '@/db/profileRepo';
 import { services } from '@/lib/services';
-import { radius, screenPadding, spacing, type, useTheme } from '@/theme';
+import { numberMaxFontScale, radius, screenPadding, spacing, type, useTheme } from '@/theme';
 
 type MacroKey = 'protein_goal_g' | 'carbs_goal_g' | 'fat_goal_g';
 
@@ -66,6 +66,7 @@ export default function MacroGoals() {
                 onChangeText={(t) => void save(field.key, t)}
                 keyboardType="number-pad"
                 accessibilityLabel={`${field.label} goal in grams`}
+                maxFontSizeMultiplier={numberMaxFontScale}
                 style={[type.number, styles.input, { color: colors.ink }]}
               />
               <Text style={[type.caption, { color: colors.inkMute }]}>g</Text>

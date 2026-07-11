@@ -17,7 +17,12 @@ export function Sheet({
   const { colors } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
+      <Pressable
+        style={styles.backdrop}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+      />
       <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
         <View style={[styles.handle, { backgroundColor: colors.fill }]} />
         {children}

@@ -14,7 +14,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import type { DayTotals } from '@/journal';
-import { cardShadow, radius, screenPadding, spacing, type, useTheme } from '@/theme';
+import { cardShadow, numberProps, radius, screenPadding, spacing, type, useTheme } from '@/theme';
+
+import { formatKcal as n, summaryLabel } from './a11y';
 
 const RING_SIZE = 56;
 const RING_STROKE = 5;
@@ -50,10 +52,6 @@ function Ring({ fraction }: { fraction: number }) {
   );
 }
 
-function n(value: number): string {
-  return Math.round(value).toLocaleString('en-IN');
-}
-
 export interface SummaryCardProps {
   totals: DayTotals;
   calorieGoal: number | null;
@@ -75,12 +73,16 @@ export function SummaryCard({
 
   const calories = hideCalories ? null : (
     <View style={styles.calories}>
-      <Text style={[type.number, { color: colors.ink }]}>
+      <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
         {n(net)}
         {calorieGoal !== null ? ` / ${n(calorieGoal)}` : ''} cals
       </Text>
       <Text style={[type.caption, { color: colors.inkMute }]}>
-        {left !== null ? `${n(left)} cals left` : 'No goal set'}
+        {left !== null
+          ? left >= 0
+            ? `${n(left)} cals left`
+            : `${n(-left)} cals over`
+          : 'No goal set'}
         {totals.pendingCount > 0 ? `  ·  +${totals.pendingCount} pending` : ''}
       </Text>
     </View>
@@ -90,7 +92,7 @@ export function SummaryCard({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Day summary. Tap to view options"
+      accessibilityLabel={summaryLabel(totals, calorieGoal, hideCalories)}
       style={[styles.card, cardShadow, { backgroundColor: colors.surface }]}
     >
       <View style={[styles.handle, { backgroundColor: colors.fill }]} />
@@ -113,7 +115,9 @@ export function SummaryCard({
               ] as const
             ).map(([label, grams, color]) => (
               <View key={label} style={styles.macro}>
-                <Text style={[type.number, { color: colors.ink }]}>{Math.round(grams)}g</Text>
+                <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
+                  {Math.round(grams)}g
+                </Text>
                 <Text style={[type.caption, { color }]}>{label}</Text>
               </View>
             ))}

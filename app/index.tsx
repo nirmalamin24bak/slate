@@ -31,7 +31,16 @@ import { dayKey, type DayLine, type DayView } from '@/journal';
 import { useOnboardingGate } from '@/lib/onboardingState';
 import { takePendingLine } from '@/lib/pendingLine';
 import { services, type Services } from '@/lib/services';
-import { iconButtonSize, radius, screenPadding, spacing, type, useTheme } from '@/theme';
+import {
+  iconButtonSize,
+  numberMaxFontScale,
+  numberProps,
+  radius,
+  screenPadding,
+  spacing,
+  type,
+  useTheme,
+} from '@/theme';
 
 const SYNC_TICK_MS = 30_000;
 
@@ -208,10 +217,14 @@ export default function Journal() {
           }}
           contentContainerStyle={styles.scroll}
         >
-          <Pressable onPress={() => setScrubbing((s) => !s)} style={styles.header}>
+          <Pressable
+            onPress={() => setScrubbing((s) => !s)}
+            accessibilityRole="button"
+            style={styles.header}
+          >
             <Text style={[type.title, { color: colors.ink }]}>{title}</Text>
             {!hideCalories && view && (
-              <Text style={[type.number, styles.total, { color: colors.inkMute }]}>
+              <Text {...numberProps} style={[type.number, styles.total, { color: colors.inkMute }]}>
                 {Math.round(view.totals.netKcal).toLocaleString('en-IN')} cals
                 {view.totals.pendingCount > 0 ? `  ·  +${view.totals.pendingCount} pending` : ''}
               </Text>
@@ -241,7 +254,7 @@ export default function Journal() {
           {weightConfirm && (
             <View style={[styles.inlinePrompt, { backgroundColor: colors.fill }]}>
               <Text style={[type.label, { color: colors.ink }]}>
-                {weightConfirm.newKg} kg — that&apos;s{' '}
+                {weightConfirm.newKg} kg. That&apos;s{' '}
                 {Math.abs(weightConfirm.newKg - weightConfirm.prevKg).toFixed(1)} kg from your last
                 weigh-in. Save it?
               </Text>
@@ -277,6 +290,7 @@ export default function Journal() {
                   placeholder="kg"
                   placeholderTextColor={colors.inkMute}
                   accessibilityLabel="Your weight in kilograms"
+                  maxFontSizeMultiplier={numberMaxFontScale}
                   style={[
                     type.number,
                     styles.weightInput,

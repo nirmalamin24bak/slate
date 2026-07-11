@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { DayLine } from '@/journal';
-import { radius, spacing, type, useTheme } from '@/theme';
+import { numberProps, radius, spacing, type, useTheme } from '@/theme';
 
 import { Sheet } from './Sheet';
 
@@ -77,7 +77,11 @@ export function DetailSheet({
       />
 
       {display.kind === 'retry' && (
-        <Pressable onPress={() => onRetry(entry.id)} accessibilityRole="button">
+        <Pressable
+          onPress={() => onRetry(entry.id)}
+          accessibilityRole="button"
+          accessibilityLabel="Not sure what this is. Try adding detail? Retry"
+        >
           <Text style={[type.label, styles.rowGap, { color: colors.inkMute }]}>
             Not sure what this is. Try adding detail? ↻
           </Text>
@@ -85,7 +89,7 @@ export function DetailSheet({
       )}
 
       {isFood && !hideCalories && entry.kcal !== null && (
-        <Text style={[type.heroNumber, styles.rowGap, { color: colors.ink }]}>
+        <Text {...numberProps} style={[type.heroNumber, styles.rowGap, { color: colors.ink }]}>
           {Math.round(entry.kcal).toLocaleString('en-IN')}
           <Text style={[type.label, { color: colors.inkMute }]}> cals</Text>
         </Text>
@@ -116,7 +120,7 @@ export function DetailSheet({
               ] as const
             ).map(([label, value, color]) => (
               <View key={label} style={styles.macro}>
-                <Text style={[type.number, { color: colors.ink }]}>
+                <Text {...numberProps} style={[type.number, { color: colors.ink }]}>
                   {Math.round(value)}g · {pct(value, grams)}
                 </Text>
                 <Text style={[type.caption, { color }]}>{label}</Text>
