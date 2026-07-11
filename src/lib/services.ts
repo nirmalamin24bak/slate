@@ -10,11 +10,11 @@ import { ensureUserRows } from '../db/profileRepo';
 import { loadCatalogue } from '../db/referenceRepo';
 import { pullReference, pullUserData, pushDirty, type RemoteDb } from '../db/sync';
 import { JournalStore } from '../journal/store';
-import { resolve } from '../resolver';
+import { resolve, TransportError, type ClassifyTransport } from '../resolver';
 import { edgeTransport } from '../resolver/transport';
 import { refreshServerEntitlement } from './entitlementSync';
 import { newId } from './ids';
-import { refreshRemoteConfig } from './remoteConfig';
+import { getRemoteConfig, refreshRemoteConfig } from './remoteConfig';
 import { reportError } from './report';
 import { configurePurchases } from './revenuecat';
 import { supabase, ensureAnonymousSession } from './supabase';
@@ -122,10 +122,20 @@ async function build(): Promise<Services> {
 
   const cache = sqliteCacheStore(adapter);
   const catalogue = await loadCatalogue(adapter);
-  const transport = edgeTransport({
+  const edge = edgeTransport({
     invoke: (name, options) =>
       supabase.functions.invoke(name, { body: options.body as Record<string, unknown> }),
   });
+  // Client-side kill switch: when remote config turns the resolver off, skip
+  // the network entirely and surface the same non-retryable 'disabled' failure
+  // the server 503 would — the pipeline falls back to cache + local rules
+  // without hammering a resolver we already know is off (plan A5/F7).
+  const transport: ClassifyTransport = {
+    async classify(line: string) {
+      if (!getRemoteConfig().resolverEnabled) throw new TransportError('disabled');
+      return edge.classify(line);
+    },
+  };
 
   // Mutable across the slow-network-install path: starts PENDING if the
   // anonymous sign-in hasn't landed yet, becomes the real uid on adoption.

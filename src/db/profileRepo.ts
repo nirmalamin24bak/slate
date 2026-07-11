@@ -182,25 +182,32 @@ export async function pullMergeWeights(
   }
 }
 
-/** Profile/kitchen are one row per user, keyed on user_id. */
+/**
+ * Profile/kitchen are one row per user, keyed on user_id. The local row always
+ * exists before a pull (services.build runs ensureUserRows first), so this is a
+ * guarded UPDATE, not an upsert: LWW on updated_at, and a locally-dirty row is
+ * never overwritten. Only columns actually present in the server payload are
+ * written, so a column the server omits keeps its local value rather than
+ * becoming null — and there is no partial-INSERT path to violate NOT NULL.
+ */
 async function pullMergeSingleton(
   adapter: SqlAdapter,
   table: 'profiles' | 'kitchen',
   columns: readonly string[],
   row: Record<string, SqlValue> | undefined,
 ): Promise<void> {
-  if (!row) return;
-  const cols = columns.join(', ');
-  const placeholders = columns.map(() => '?').join(', ');
-  const updates = columns
-    .filter((c) => c !== 'user_id')
-    .map((c) => `${c} = excluded.${c}`)
-    .join(', ');
+  if (!row || row['updated_at'] === undefined || row['user_id'] === undefined) return;
+  const writable = columns.filter((c) => c !== 'user_id' && c in row);
+  if (writable.length === 0) return;
+  const sets = writable.map((c) => `${c} = ?`).join(', ');
   await adapter.run(
-    `INSERT INTO ${table} (${cols}, dirty) VALUES (${placeholders}, 0)
-     ON CONFLICT(user_id) DO UPDATE SET ${updates}
-     WHERE ${table}.dirty = 0 AND excluded.updated_at > ${table}.updated_at`,
-    columns.map((c) => row[c] ?? null),
+    `UPDATE ${table} SET ${sets}
+     WHERE user_id = ? AND dirty = 0 AND ? > updated_at`,
+    [
+      ...writable.map((c) => row[c] as SqlValue),
+      row['user_id'] as SqlValue,
+      row['updated_at'] as SqlValue,
+    ],
   );
 }
 
