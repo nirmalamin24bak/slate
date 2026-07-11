@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
 import { env } from './env';
+import { reportEvent } from './report';
 
 // Supabase is truth; expo-sqlite is the on-device read source (spec/04).
 // Region ap-south-1 (Mumbai) — DPDP data residency. Confirmed in the
@@ -31,6 +32,6 @@ export async function ensureAnonymousSession(): Promise<void> {
     // Offline install is a specced case (spec/09): onboarding state is held
     // locally and flushed to profiles + kitchen when a session exists.
     // Callers treat "no session yet" as queued work, not a failure screen.
-    console.warn('supabase: anonymous sign-in deferred:', error.message);
+    reportEvent('anon_signin_deferred', { message: error.message });
   }
 }

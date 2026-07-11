@@ -11,6 +11,8 @@
 // free tier. The rest of the app reads Plus through getEntitlements /
 // subscribeEntitlements and never imports the SDK.
 
+import { env } from './env';
+
 export interface Entitlements {
   plus: boolean;
 }
@@ -155,7 +157,7 @@ export function subscribeEntitlements(listener: () => void): () => void {
 export async function configurePurchases(supabaseUserId: string): Promise<void> {
   if (configured) return;
   sdk = loadSdk();
-  const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
+  const apiKey = env.revenueCatIosKey;
   if (!sdk || !apiKey) return; // Expo Go / web / missing key: free tier
   configured = true;
   sdk.configure({ apiKey });
