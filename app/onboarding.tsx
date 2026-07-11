@@ -17,6 +17,7 @@ import {
   type OnboardingDraft,
 } from '@/onboarding';
 import { completeOnboarding, loadDraft, saveDraft } from '@/lib/onboardingState';
+import { BOUNDS, parseBounded } from '@/lib/parseNumeric';
 import { purchasePlus } from '@/lib/revenuecat';
 import {
   numberMaxFontScale,
@@ -315,7 +316,7 @@ export default function Onboarding() {
               <TextInput
                 keyboardType="number-pad"
                 value={b.age === null ? '' : String(b.age)}
-                onChangeText={(v) => setBody({ age: v ? Number(v) : null })}
+                onChangeText={(v) => setBody({ age: parseBounded(v, BOUNDS.age) })}
                 accessibilityLabel="Age"
                 style={[
                   type.body,
@@ -343,7 +344,7 @@ export default function Onboarding() {
                 <TextInput
                   keyboardType="numeric"
                   value={b.heightCm === null ? '' : String(b.heightCm)}
-                  onChangeText={(v) => setBody({ heightCm: v ? Number(v) : null })}
+                  onChangeText={(v) => setBody({ heightCm: parseBounded(v, BOUNDS.heightCm) })}
                   accessibilityLabel="Height in centimetres"
                   style={[
                     type.body,
@@ -363,7 +364,11 @@ export default function Onboarding() {
                       const f = Number(v);
                       const i = Number(inches || '0');
                       // conversion at the input boundary; storage is always cm
-                      if (Number.isFinite(f) && f > 0) setBody({ heightCm: cmFromFtIn(f, i) });
+                      if (Number.isFinite(f) && f > 0) {
+                        setBody({
+                          heightCm: parseBounded(String(cmFromFtIn(f, i)), BOUNDS.heightCm),
+                        });
+                      }
                     }}
                     accessibilityLabel="Height, feet"
                     style={[
@@ -382,7 +387,11 @@ export default function Onboarding() {
                       setInches(v);
                       const f = Number(feet || '0');
                       const i = Number(v || '0');
-                      if (Number.isFinite(f) && f > 0) setBody({ heightCm: cmFromFtIn(f, i) });
+                      if (Number.isFinite(f) && f > 0) {
+                        setBody({
+                          heightCm: parseBounded(String(cmFromFtIn(f, i)), BOUNDS.heightCm),
+                        });
+                      }
                     }}
                     accessibilityLabel="Height, inches"
                     style={[
@@ -398,7 +407,7 @@ export default function Onboarding() {
               <TextInput
                 keyboardType="numeric"
                 value={b.weightKg === null ? '' : String(b.weightKg)}
-                onChangeText={(v) => setBody({ weightKg: v ? Number(v) : null })}
+                onChangeText={(v) => setBody({ weightKg: parseBounded(v, BOUNDS.weightKg) })}
                 accessibilityLabel="Weight in kilograms"
                 style={[
                   type.body,
@@ -464,7 +473,11 @@ export default function Onboarding() {
               <TextInput
                 keyboardType="number-pad"
                 value={String(k.oilBottleDays)}
-                onChangeText={(v) => setKitchen({ oilBottleDays: Number(v) || 30 })}
+                onChangeText={(v) =>
+                  setKitchen({
+                    oilBottleDays: parseBounded(v, BOUNDS.oilBottleDays) ?? k.oilBottleDays,
+                  })
+                }
                 accessibilityLabel="Days a 1 litre oil bottle lasts"
                 maxFontSizeMultiplier={numberMaxFontScale}
                 style={[
@@ -477,7 +490,11 @@ export default function Onboarding() {
               <TextInput
                 keyboardType="number-pad"
                 value={String(k.householdSize)}
-                onChangeText={(v) => setKitchen({ householdSize: Number(v) || 4 })}
+                onChangeText={(v) =>
+                  setKitchen({
+                    householdSize: parseBounded(v, BOUNDS.householdSize) ?? k.householdSize,
+                  })
+                }
                 accessibilityLabel="People cooked for"
                 maxFontSizeMultiplier={numberMaxFontScale}
                 style={[

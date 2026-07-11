@@ -29,6 +29,7 @@ import { getProfile } from '@/db/profileRepo';
 import type { ProfileRow } from '@/db/rows';
 import { dayKey, type DayLine, type DayView } from '@/journal';
 import { useOnboardingGate } from '@/lib/onboardingState';
+import { BOUNDS, parseBounded } from '@/lib/parseNumeric';
 import { takePendingLine } from '@/lib/pendingLine';
 import { services, type Services } from '@/lib/services';
 import {
@@ -71,6 +72,7 @@ export default function Journal() {
   const [weightConfirm, setWeightConfirm] = useState<WeightConfirm | null>(null);
   const [needsWeight, setNeedsWeight] = useState(false);
   const [weightInput, setWeightInput] = useState('');
+  const [weightError, setWeightError] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   const load = useCallback(async (s: Services, day: string) => {
@@ -173,8 +175,15 @@ export default function Journal() {
   };
 
   const submitWeight = () => {
-    const kg = Number(weightInput);
-    if (!svc || !Number.isFinite(kg) || kg < 30 || kg > 250) return;
+    if (!svc) return;
+    const kg = parseBounded(weightInput, BOUNDS.weightKg);
+    if (kg === null) {
+      // Was a silent no-op; the prompt just sat there with no signal. State
+      // the range, factually (BRAND-VOICE 3), keep focus.
+      setWeightError('Enter a weight between 30 and 250 kg.');
+      return;
+    }
+    setWeightError(null);
     setNeedsWeight(false);
     setWeightInput('');
     void svc.store.provideBodyWeight(kg, selectedDay);
@@ -305,6 +314,11 @@ export default function Journal() {
                   <Text style={[type.label, { color: colors.ink }]}>Save</Text>
                 </Pressable>
               </View>
+              {weightError && (
+                <Text style={[type.label, styles.weightError, { color: colors.inkMute }]}>
+                  {weightError}
+                </Text>
+              )}
             </View>
           )}
 
@@ -415,6 +429,9 @@ const styles = StyleSheet.create({
   promptRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  weightError: {
+    marginTop: spacing.sm,
   },
   promptBtn: {
     borderRadius: radius.chip,
