@@ -6,3 +6,5 @@ export type { DayContext, DayLine, DayLookups, DayTotals, LineDisplay } from './
 export { addDays, dayKey, daysBetween, FREE_HISTORY_DAYS, isWithinFreeWindow } from './dates';
 export { JournalStore } from './store';
 export type { DayView, JournalDeps, JournalEvent } from './store';
+export { computeStreak, consistencyDots } from './streak';
+export type { StreakInfo } from './streak';

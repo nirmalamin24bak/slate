@@ -160,6 +160,99 @@ export async function listRecents(
   return rows.map((r) => r.raw_text);
 }
 
+/**
+ * Distinct logged day keys (any intent, non-deleted), for the streak (§E0:
+ * a day counts with ≥1 entry of any intent — one chai is a logged day).
+ */
+export async function listLoggedDates(adapter: SqlAdapter, userId: string): Promise<string[]> {
+  const rows = await adapter.all<{ log_date: string }>(
+    `SELECT DISTINCT log_date FROM entries
+     WHERE user_id = ? AND deleted_at IS NULL
+     ORDER BY log_date DESC`,
+    [userId],
+  );
+  return rows.map((r) => r.log_date);
+}
+
+/** One row per logged day for History: date, entry count, net kcal. */
+export interface DaySummary {
+  log_date: string;
+  entry_count: number;
+  net_kcal: number;
+}
+
+export async function listDaySummaries(
+  adapter: SqlAdapter,
+  userId: string,
+  limit: number,
+): Promise<DaySummary[]> {
+  // Sums read the denormalised columns recomputeDay persists: food kcal is
+  // positive, counted burns are negative kcal with is_included = 0.
+  return adapter.all<DaySummary>(
+    `SELECT log_date,
+            COUNT(*) AS entry_count,
+            COALESCE(SUM(CASE
+              WHEN status = 'resolved' AND kcal IS NOT NULL AND is_included = 0 THEN kcal
+              ELSE 0 END), 0) AS net_kcal
+     FROM entries
+     WHERE user_id = ? AND deleted_at IS NULL
+     GROUP BY log_date
+     ORDER BY log_date DESC
+     LIMIT ?`,
+    [userId, limit],
+  );
+}
+
+/** Per-day sums inside an inclusive day-key range, for Stats (spec/02 §E). */
+export interface DayStatRow {
+  log_date: string;
+  consumed_kcal: number;
+  burned_kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+  sugar_g: number;
+  water_ml: number;
+}
+
+export async function listDayStats(
+  adapter: SqlAdapter,
+  userId: string,
+  start: string,
+  end: string,
+): Promise<DayStatRow[]> {
+  return adapter.all<DayStatRow>(
+    `SELECT log_date,
+            COALESCE(SUM(CASE WHEN intent = 'food' AND status = 'resolved' THEN kcal ELSE 0 END), 0) AS consumed_kcal,
+            COALESCE(SUM(CASE
+              WHEN intent IN ('exercise','steps') AND status = 'resolved'
+                   AND is_included = 0 AND kcal IS NOT NULL THEN -kcal
+              ELSE 0 END), 0) AS burned_kcal,
+            COALESCE(SUM(CASE WHEN intent = 'food' THEN protein_g ELSE 0 END), 0) AS protein_g,
+            COALESCE(SUM(CASE WHEN intent = 'food' THEN carbs_g ELSE 0 END), 0) AS carbs_g,
+            COALESCE(SUM(CASE WHEN intent = 'food' THEN fat_g ELSE 0 END), 0) AS fat_g,
+            COALESCE(SUM(CASE WHEN intent = 'food' THEN fiber_g ELSE 0 END), 0) AS fiber_g,
+            COALESCE(SUM(CASE WHEN intent = 'food' THEN sugar_g ELSE 0 END), 0) AS sugar_g,
+            COALESCE(SUM(water_ml), 0) AS water_ml
+     FROM entries
+     WHERE user_id = ? AND deleted_at IS NULL AND log_date >= ? AND log_date <= ?
+     GROUP BY log_date
+     ORDER BY log_date ASC`,
+    [userId, start, end],
+  );
+}
+
+/** Every non-deleted entry, oldest first — the export bundle (spec/08). */
+export async function listAllEntries(adapter: SqlAdapter, userId: string): Promise<EntryRow[]> {
+  return adapter.all<EntryRow>(
+    `SELECT * FROM entries
+     WHERE user_id = ? AND deleted_at IS NULL
+     ORDER BY log_date ASC, position ASC`,
+    [userId],
+  );
+}
+
 export async function listDirtyEntries(adapter: SqlAdapter): Promise<EntryRow[]> {
   return adapter.all<EntryRow>('SELECT * FROM entries WHERE dirty = 1');
 }

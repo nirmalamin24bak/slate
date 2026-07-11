@@ -135,3 +135,19 @@ export async function getPackagedFood(
 ): Promise<PackagedFoodRow | null> {
   return adapter.get<PackagedFoodRow>('SELECT * FROM packaged_foods WHERE barcode = ?', [barcode]);
 }
+
+/**
+ * Cache an Open Food Facts hit into the local packaged_foods mirror so the
+ * resolver validates its barcode ref. This is the read mirror only — the
+ * authoritative table is Supabase, corrected by us; a pull overwrites this.
+ * INSERT OR IGNORE keeps our own corrected row if one already arrived.
+ */
+export async function upsertPackagedFoodLocal(
+  adapter: SqlAdapter,
+  row: Pick<PackagedFoodRow, 'barcode' | 'name' | 'kcal_100g'>,
+): Promise<void> {
+  await adapter.run(
+    `INSERT OR IGNORE INTO packaged_foods (barcode, brand, name, kcal_100g) VALUES (?, NULL, ?, ?)`,
+    [row.barcode, row.name, row.kcal_100g],
+  );
+}

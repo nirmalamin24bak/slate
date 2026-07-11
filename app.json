@@ -10,7 +10,10 @@
     "backgroundColor": "#F7F7F5",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.sonalsystems.slate"
+      "bundleIdentifier": "com.sonalsystems.slate",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Slate uses the camera to scan barcodes and nutrition labels."
+      }
     },
     "android": {
       "package": "com.sonalsystems.slate",
@@ -26,7 +29,20 @@
       "bundler": "metro",
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-router", "expo-status-bar", "expo-font", "expo-sqlite", "expo-splash-screen"],
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-font",
+      "expo-sqlite",
+      "expo-splash-screen",
+      "expo-sharing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Slate uses the camera to scan barcodes and nutrition labels."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     }

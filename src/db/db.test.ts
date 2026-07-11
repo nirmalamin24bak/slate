@@ -4,8 +4,12 @@ import { sqliteCacheStore } from './cacheStore';
 import {
   getEntry,
   insertEntry,
+  listAllEntries,
   listDay,
+  listDayStats,
+  listDaySummaries,
   listDirtyEntries,
+  listLoggedDates,
   listRecents,
   listRetryable,
   listSavedFoods,
@@ -19,17 +23,20 @@ import {
   getKitchen,
   getProfile,
   listDirtyWeights,
+  listWeights,
   patchProfile,
   upsertWeight,
 } from './profileRepo';
 import {
   getExercise,
+  getPackagedFood,
   loadCatalogue,
   loadDish,
   replaceDishes,
   replaceExercises,
   replaceIngredients,
   replacePackagedFoods,
+  upsertPackagedFoodLocal,
 } from './referenceRepo';
 import type { SqlValue } from './adapter';
 import { adoptPendingUser, PENDING_USER_ID } from './adoption';
@@ -169,6 +176,137 @@ describe('entriesRepo', () => {
   });
 });
 
+// The read surfaces feeding streak (§E0), Stats (§E), History, and the export
+// bundle (spec/08). Pure aggregation is tested in stats/aggregate.test.ts and
+// journal/streak.test.ts; here we prove the SQL feeds them the right shapes.
+describe('entriesRepo — read surfaces', () => {
+  it('listLoggedDates: distinct non-deleted day keys, any intent, newest first', async () => {
+    const db = await openTestDb();
+    await insertEntry(db, entry({ id: 'a', log_date: '2026-07-08', intent: 'food' }));
+    await insertEntry(db, entry({ id: 'b', log_date: '2026-07-08', intent: 'water', position: 1 }));
+    await insertEntry(db, entry({ id: 'c', log_date: '2026-07-10', intent: 'steps', position: 2 }));
+    await insertEntry(db, entry({ id: 'd', log_date: '2026-07-09', deleted_at: T1, position: 3 }));
+
+    // one chai is a logged day; two entries on the 8th collapse to one day; the
+    // soft-deleted 9th does not appear at all.
+    expect(await listLoggedDates(db, USER)).toEqual(['2026-07-10', '2026-07-08']);
+    db.close();
+  });
+
+  it('listDayStats: sums food into consumed/macros, counted burns into burned, in range', async () => {
+    const db = await openTestDb();
+    await insertEntry(
+      db,
+      entry({
+        id: 'f',
+        log_date: '2026-07-10',
+        intent: 'food',
+        status: 'resolved',
+        kcal: 500,
+        protein_g: 20,
+        carbs_g: 60,
+        fat_g: 15,
+        fiber_g: 8,
+        sugar_g: 5,
+      }),
+    );
+    await insertEntry(
+      db,
+      entry({
+        id: 's',
+        log_date: '2026-07-10',
+        intent: 'steps',
+        status: 'resolved',
+        kcal: -120, // stored negative; is_included = 0 so it counts
+        is_included: 0,
+        position: 1,
+      }),
+    );
+    await insertEntry(
+      db,
+      entry({
+        id: 'x',
+        log_date: '2026-07-10',
+        intent: 'exercise',
+        status: 'resolved',
+        kcal: -200,
+        is_included: 1, // counted elsewhere → excluded from burned
+        position: 2,
+      }),
+    );
+    await insertEntry(
+      db,
+      entry({ id: 'w', log_date: '2026-07-10', intent: 'water', water_ml: 500, position: 3 }),
+    );
+    // out of range — must be excluded
+    await insertEntry(
+      db,
+      entry({ id: 'old', log_date: '2026-07-01', intent: 'food', status: 'resolved', kcal: 999 }),
+    );
+
+    const stats = await listDayStats(db, USER, '2026-07-05', '2026-07-10');
+    expect(stats).toHaveLength(1);
+    const day = stats[0];
+    expect(day?.log_date).toBe('2026-07-10');
+    expect(day?.consumed_kcal).toBe(500);
+    expect(day?.burned_kcal).toBe(120); // positive magnitude; included burn excluded
+    expect(day?.protein_g).toBe(20);
+    expect(day?.fiber_g).toBe(8);
+    expect(day?.water_ml).toBe(500);
+    db.close();
+  });
+
+  it('listDaySummaries: one row per day, entry count and net kcal, newest first, limited', async () => {
+    const db = await openTestDb();
+    await insertEntry(
+      db,
+      entry({ id: 'a', log_date: '2026-07-10', status: 'resolved', kcal: 300, is_included: 0 }),
+    );
+    await insertEntry(
+      db,
+      entry({
+        id: 'b',
+        log_date: '2026-07-10',
+        intent: 'steps',
+        status: 'resolved',
+        kcal: -100,
+        is_included: 0,
+        position: 1,
+      }),
+    );
+    await insertEntry(
+      db,
+      entry({ id: 'c', log_date: '2026-07-09', status: 'resolved', kcal: 250, position: 2 }),
+    );
+
+    const all = await listDaySummaries(db, USER, 10);
+    expect(all.map((d) => d.log_date)).toEqual(['2026-07-10', '2026-07-09']);
+    const latest = all[0];
+    expect(latest?.entry_count).toBe(2);
+    expect(latest?.net_kcal).toBe(200); // 300 food − 100 burn
+
+    const limited = await listDaySummaries(db, USER, 1);
+    expect(limited).toHaveLength(1);
+    expect(limited[0]?.log_date).toBe('2026-07-10');
+    db.close();
+  });
+
+  it('listAllEntries: every non-deleted entry, oldest first by day then position', async () => {
+    const db = await openTestDb();
+    await insertEntry(db, entry({ id: 'later', log_date: '2026-07-10', position: 1 }));
+    await insertEntry(db, entry({ id: 'earlier', log_date: '2026-07-10', position: 0 }));
+    await insertEntry(db, entry({ id: 'oldday', log_date: '2026-07-08', position: 0 }));
+    await insertEntry(
+      db,
+      entry({ id: 'gone', log_date: '2026-07-09', deleted_at: T1, position: 0 }),
+    );
+
+    const rows = await listAllEntries(db, USER);
+    expect(rows.map((e) => e.id)).toEqual(['oldday', 'earlier', 'later']);
+    db.close();
+  });
+});
+
 describe('weights', () => {
   const weight = (overrides: Partial<WeightRow>): WeightRow => ({
     id: 'w1',
@@ -191,6 +329,20 @@ describe('weights', () => {
     const rows = await db.all<WeightRow>('SELECT * FROM weights');
     expect(rows).toHaveLength(1);
     expect(rows[0]?.weight_kg).toBe(84.5);
+    db.close();
+  });
+
+  it('listWeights: non-deleted, oldest first — Stats line + export', async () => {
+    const db = await openTestDb();
+    await upsertWeight(db, weight({ id: 'w1', log_date: '2026-07-10', weight_kg: 82 }));
+    await upsertWeight(db, weight({ id: 'w2', log_date: '2026-07-05', weight_kg: 84 }));
+    await upsertWeight(
+      db,
+      weight({ id: 'w3', log_date: '2026-07-08', weight_kg: 83, deleted_at: T1 }),
+    );
+
+    const rows = await listWeights(db, USER);
+    expect(rows.map((w) => w.log_date)).toEqual(['2026-07-05', '2026-07-10']);
     db.close();
   });
 });
@@ -351,6 +503,35 @@ describe('referenceRepo', () => {
 
     const jog = await getExercise(db, 'ex_jog');
     expect(jog?.met).toBe(7);
+    db.close();
+  });
+
+  it('upsertPackagedFoodLocal caches an OFF hit but never clobbers our corrected row', async () => {
+    const db = await openTestDb();
+    // A fresh OFF scan lands in the mirror so the resolver can validate the ref.
+    await upsertPackagedFoodLocal(db, { barcode: '111', name: 'OFF Snack', kcal_100g: 500 });
+    const cat = await loadCatalogue(db);
+    expect(cat.packagedFoods.has('111')).toBe(true); // resolver can now validate the ref
+    expect((await getPackagedFood(db, '111'))?.name).toBe('OFF Snack');
+
+    // Our authoritative row arrived first; INSERT OR IGNORE must keep it.
+    await replacePackagedFoods(db, [
+      {
+        barcode: '222',
+        brand: null,
+        name: 'Ours',
+        kcal_100g: 100,
+        protein_100g: null,
+        carbs_100g: null,
+        fat_100g: null,
+        fiber_100g: null,
+        sugar_100g: null,
+      },
+    ]);
+    await upsertPackagedFoodLocal(db, { barcode: '222', name: 'OFF Override', kcal_100g: 999 });
+    const ours = await getPackagedFood(db, '222');
+    expect(ours?.name).toBe('Ours'); // ours wins
+    expect(ours?.kcal_100g).toBe(100);
     db.close();
   });
 });

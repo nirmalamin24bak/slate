@@ -17,6 +17,7 @@ import {
   type OnboardingDraft,
 } from '@/onboarding';
 import { completeOnboarding, loadDraft, saveDraft } from '@/lib/onboardingState';
+import { purchasePlus } from '@/lib/revenuecat';
 import {
   primaryButtonHeight,
   radius,
@@ -160,6 +161,17 @@ export default function Onboarding() {
   };
 
   const finish = () => router.replace('/');
+
+  // Yearly is the trial plan (spec/07). Either outcome lands on the journal —
+  // the paywall is dismissible, never a gate.
+  const upgrade = async () => {
+    try {
+      await purchasePlus('yearly');
+    } catch {
+      // Apple's sheet handled cancel/failure; fall through to the journal.
+    }
+    finish();
+  };
 
   const preview = useMemo(() => bmrPreview(draft.body), [draft.body]);
 
@@ -643,9 +655,8 @@ export default function Onboarding() {
               Monthly ₹199 · Yearly ₹1,499 <Text style={{ color: colors.inkMute }}>(-37%)</Text>
             </Text>
             <View style={styles.spacer} />
-            {/* Purchase wiring is Phase 5 (RevenueCat); the button exists, the sheet is honest */}
             <SecondaryButton label="No thanks" onPress={finish} />
-            <PrimaryButton label="Upgrade" onPress={finish} />
+            <PrimaryButton label="Upgrade" onPress={() => void upgrade()} />
           </>
         );
     }

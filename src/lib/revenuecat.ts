@@ -1,29 +1,157 @@
-// RevenueCat wrapper — Phase 0 stub.
-//
-// The real SDK (react-native-purchases) is a native module that does not run
-// in Expo Go, so it is not imported until the paywall lands in Phase 5 with a
-// dev build. This file freezes the interface the app codes against.
+// RevenueCat boundary — the only file that touches react-native-purchases.
 //
 // Monetization contract (spec/07):
 // - Apple IAP only. Products: slate_monthly_199, slate_yearly_1499.
 // - Purchases.logIn(supabaseUserId) aliases the RevenueCat anonymous ID to
 //   auth.uid() at first launch, so entitlement and data share an identity.
 // - A user can buy Plus without ever signing in.
+//
+// The SDK is a native module and does not exist in Expo Go, on web, or in
+// vitest. It is loaded guardedly; everywhere it is absent the app behaves as
+// free tier. The rest of the app reads Plus through getEntitlements /
+// subscribeEntitlements and never imports the SDK.
 
 export interface Entitlements {
   plus: boolean;
 }
 
-export async function configurePurchases(_supabaseUserId: string): Promise<void> {
-  // Phase 5: Purchases.configure({ apiKey }) then Purchases.logIn(supabaseUserId).
+export interface PlusPrices {
+  /** localized, e.g. '₹199' */
+  monthly: string | null;
+  /** localized, e.g. '₹1,499' */
+  yearly: string | null;
 }
 
-export async function getEntitlements(): Promise<Entitlements> {
-  // Phase 5: read customerInfo.entitlements.active.
-  return { plus: false };
+export type PlusPlan = 'monthly' | 'yearly';
+
+const ENTITLEMENT_ID = 'plus';
+
+// --- minimal typed surface of react-native-purchases (v9) -------------------
+
+interface RcCustomerInfo {
+  entitlements: { active: Record<string, unknown> };
+}
+
+interface RcPackage {
+  identifier: string;
+  packageType: string; // 'MONTHLY' | 'ANNUAL' | ...
+  product: { priceString: string };
+}
+
+interface RcOfferings {
+  current: { availablePackages: RcPackage[] } | null;
+}
+
+interface RcSdk {
+  configure(options: { apiKey: string; appUserID?: string }): void;
+  logIn(appUserID: string): Promise<{ customerInfo: RcCustomerInfo }>;
+  getCustomerInfo(): Promise<RcCustomerInfo>;
+  getOfferings(): Promise<RcOfferings>;
+  purchasePackage(pkg: RcPackage): Promise<{ customerInfo: RcCustomerInfo }>;
+  restorePurchases(): Promise<RcCustomerInfo>;
+  addCustomerInfoUpdateListener(listener: (info: RcCustomerInfo) => void): void;
+}
+
+function loadSdk(): RcSdk | null {
+  try {
+    // Native module — absent in Expo Go / web / node. Guarded on purpose.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('react-native-purchases') as { default?: RcSdk };
+    return mod.default ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// --- entitlement store -------------------------------------------------------
+
+let sdk: RcSdk | null = null;
+let configured = false;
+let current: Entitlements = { plus: false };
+const listeners = new Set<() => void>();
+
+function setEntitlements(next: Entitlements): void {
+  if (next.plus === current.plus) return;
+  current = next;
+  for (const fn of listeners) fn();
+}
+
+function fromCustomerInfo(info: RcCustomerInfo): Entitlements {
+  return { plus: ENTITLEMENT_ID in info.entitlements.active };
+}
+
+/** Dev-only escape hatch so the free/Plus matrix is testable without IAP. */
+function devOverride(): Entitlements | null {
+  if (!__DEV__) return null;
+  const flag = process.env.EXPO_PUBLIC_DEV_FORCE_PLUS;
+  return flag === '1' ? { plus: true } : null;
+}
+
+export function getEntitlements(): Entitlements {
+  return devOverride() ?? current;
+}
+
+export function subscribeEntitlements(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/**
+ * Boot-time wiring: configure the SDK and alias the RevenueCat anonymous ID to
+ * the Supabase user id. Safe to call when the native module is absent (no-op,
+ * free tier) or repeatedly (configures once).
+ */
+export async function configurePurchases(supabaseUserId: string): Promise<void> {
+  if (configured) return;
+  sdk = loadSdk();
+  const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
+  if (!sdk || !apiKey) return; // Expo Go / web / missing key: free tier
+  configured = true;
+  sdk.configure({ apiKey });
+  sdk.addCustomerInfoUpdateListener((info) => setEntitlements(fromCustomerInfo(info)));
+  try {
+    const { customerInfo } = await sdk.logIn(supabaseUserId);
+    setEntitlements(fromCustomerInfo(customerInfo));
+  } catch {
+    // Offline at boot: the listener updates us when StoreKit responds.
+  }
+}
+
+/** Localized prices for the paywall. Nulls when the store is unreachable. */
+export async function getPlusPrices(): Promise<PlusPrices> {
+  if (!sdk) return { monthly: null, yearly: null };
+  try {
+    const offerings = await sdk.getOfferings();
+    const packages = offerings.current?.availablePackages ?? [];
+    const monthly = packages.find((p) => p.packageType === 'MONTHLY');
+    const yearly = packages.find((p) => p.packageType === 'ANNUAL');
+    return {
+      monthly: monthly?.product.priceString ?? null,
+      yearly: yearly?.product.priceString ?? null,
+    };
+  } catch {
+    return { monthly: null, yearly: null };
+  }
+}
+
+/** Runs the Apple purchase sheet. Resolves to the resulting entitlements. */
+export async function purchasePlus(plan: PlusPlan): Promise<Entitlements> {
+  if (!sdk) return getEntitlements();
+  const offerings = await sdk.getOfferings();
+  const packages = offerings.current?.availablePackages ?? [];
+  const wanted = plan === 'monthly' ? 'MONTHLY' : 'ANNUAL';
+  const pkg = packages.find((p) => p.packageType === wanted);
+  if (!pkg) throw new Error('plan unavailable');
+  const { customerInfo } = await sdk.purchasePackage(pkg);
+  setEntitlements(fromCustomerInfo(customerInfo));
+  return getEntitlements();
 }
 
 export async function restorePurchases(): Promise<Entitlements> {
-  // Phase 5: Purchases.restorePurchases().
-  return { plus: false };
+  if (!sdk) return getEntitlements();
+  const info = await sdk.restorePurchases();
+  setEntitlements(fromCustomerInfo(info));
+  return getEntitlements();
 }

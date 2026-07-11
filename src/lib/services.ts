@@ -13,6 +13,7 @@ import { JournalStore } from '../journal/store';
 import { resolve } from '../resolver';
 import { edgeTransport } from '../resolver/transport';
 import { newId } from './ids';
+import { configurePurchases } from './revenuecat';
 import { supabase, ensureAnonymousSession } from './supabase';
 
 // Offline install (spec/09): rows are written under PENDING_USER_ID until the
@@ -51,6 +52,12 @@ async function build(): Promise<Services> {
   const userId = sessionUserId ?? PENDING_USER_ID;
   if (sessionUserId) await adoptPendingUser(adapter, sessionUserId);
   await ensureUserRows(adapter, userId, new Date().toISOString());
+
+  // Alias the RevenueCat anonymous ID to auth.uid() (spec/07) — entitlement
+  // and data share an identity. Never with the placeholder id; the offline
+  // install path configures on adoption instead. Non-blocking: the journal
+  // must not wait on StoreKit.
+  if (sessionUserId) void configurePurchases(sessionUserId);
 
   // Reference mirrors: refresh best-effort; a stale mirror still works and
   // an empty one degrades lines to unresolved, honestly.
@@ -95,6 +102,7 @@ async function build(): Promise<Services> {
     await adoptPendingUser(adapter, realId);
     currentUserId = realId;
     store.reassignUser(realId);
+    void configurePurchases(realId);
   }
 
   return {

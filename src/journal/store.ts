@@ -173,6 +173,17 @@ export class JournalStore {
     this.emit({ type: 'change' });
   }
 
+  /**
+   * Re-run write-time nutrition for a day after a kitchen or personalization
+   * change (spec/06: nutrition is denormalised, so past days keep their
+   * calc_version and are NOT rewritten — only the day the user is looking at
+   * refreshes). Emits change so the journal re-reads.
+   */
+  async recomputeToday(logDate: string): Promise<void> {
+    await this.recompute(logDate);
+    this.emit({ type: 'change' });
+  }
+
   /** Nickname a line → it becomes a saved food. Saving is renaming. */
   async setNickname(entryId: string, nickname: string | null): Promise<void> {
     await patchEntry(this.deps.adapter, entryId, { nickname }, this.deps.now().toISOString());
@@ -428,6 +439,7 @@ export class JournalStore {
         kitchen: toKitchen(kitchenRow),
         kitchenIsAssumed: kitchenRow.is_assumed === 1,
         weightKg: (profile?.weight_is_assumed ?? 1) === 1 ? null : (profile?.weight_kg ?? null),
+        personalization: profile?.personalization ?? null,
       },
     );
 

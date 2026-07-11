@@ -19,6 +19,7 @@ import {
   displayNet,
   metBurn,
   oilShares,
+  parsePersonalization,
   stepsBurn,
   weightForCalc,
   type Dish,
@@ -164,6 +165,8 @@ export interface DayContext {
   kitchen: Kitchen;
   kitchenIsAssumed: boolean;
   weightKg: number | null;
+  /** profiles.personalization free text (spec/05); null when unset */
+  personalization: string | null;
 }
 
 function exerciseMinutes(qty: number, unit: string): number {
@@ -200,6 +203,8 @@ export function recomputeDay(
     weightKg: ctx.weightKg,
     weightIsAssumed: ctx.weightKg === null,
   });
+  // Bounded modifier (spec/05): the engine clamps whatever this parses to.
+  const personalization = parsePersonalization(ctx.personalization);
 
   const resolved = rows.filter((r) => r.status === 'resolved');
 
@@ -228,7 +233,7 @@ export function recomputeDay(
         dish,
         oilShare: shareByEntry.get(row.id) ?? 0,
         kitchen: ctx.kitchen,
-        personalization: null, // profiles.personalization parsing lands in Phase 5
+        personalization,
       });
       patches.set(row.id, {
         kcal: n.kcal,
