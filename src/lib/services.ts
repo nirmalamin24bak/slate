@@ -12,6 +12,7 @@ import { pullReference, pullUserData, pushDirty, type RemoteDb } from '../db/syn
 import { JournalStore } from '../journal/store';
 import { resolve } from '../resolver';
 import { edgeTransport } from '../resolver/transport';
+import { refreshServerEntitlement } from './entitlementSync';
 import { newId } from './ids';
 import { reportError } from './report';
 import { configurePurchases } from './revenuecat';
@@ -73,6 +74,8 @@ export interface Services {
   userId: string;
   /** drain the retry queue + push dirty rows; safe to call on any tick */
   syncTick(): Promise<void>;
+  /** re-read the authoritative entitlement row (call on app foreground) */
+  refreshEntitlement(): Promise<void>;
 }
 
 let servicesPromise: Promise<Services> | null = null;
@@ -91,7 +94,10 @@ async function build(): Promise<Services> {
   // and data share an identity. Never with the placeholder id; the offline
   // install path configures on adoption instead. Non-blocking: the journal
   // must not wait on StoreKit.
-  if (sessionUserId) void configurePurchases(sessionUserId);
+  if (sessionUserId) {
+    void configurePurchases(sessionUserId);
+    void refreshServerEntitlement(supabase); // authoritative Plus from the server
+  }
 
   // Reference mirrors: refresh best-effort; a stale mirror still works and
   // an empty one degrades lines to unresolved, honestly.
@@ -148,6 +154,7 @@ async function build(): Promise<Services> {
     currentUserId = realId;
     store.reassignUser(realId);
     void configurePurchases(realId);
+    void refreshServerEntitlement(supabase);
   }
 
   return {
@@ -169,6 +176,9 @@ async function build(): Promise<Services> {
           reportError(error, { op: 'syncTick' });
         }
       }
+    },
+    async refreshEntitlement() {
+      await refreshServerEntitlement(supabase);
     },
   };
 }

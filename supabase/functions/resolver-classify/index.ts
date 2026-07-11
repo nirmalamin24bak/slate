@@ -139,6 +139,21 @@ async function maybeCacheWrite(line: string, reply: string): Promise<void> {
   });
 }
 
+/**
+ * Server-authoritative Plus check (plan B2): active AND not expired. Read with
+ * the service role so it cannot be spoofed by the caller. Defaults to false on
+ * any error — Plus is a grant, never assumed.
+ */
+async function callerIsPlus(userId: string): Promise<boolean> {
+  const { data } = await service
+    .from('entitlements')
+    .select('active, expires_at')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (!data?.active) return false;
+  return data.expires_at === null || new Date(data.expires_at as string) > new Date();
+}
+
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -158,6 +173,13 @@ Deno.serve(async (req) => {
   });
   const { data: userData, error: userError } = await asCaller.auth.getUser();
   if (userError || !userData.user) return json(401, { error: 'unauthorized' });
+
+  // Server-authoritative Plus (plan B2). A spoofed client flag grants nothing
+  // that costs money: this reads the entitlements table with the service role
+  // and is the only source of truth for Plus-gated resolution. Custom-dish
+  // refs (Phase 5) will only be offered to the model / accepted when isPlus.
+  const isPlus = await callerIsPlus(userData.user.id);
+  void isPlus; // Phase 5 threads this into systemPrompt(catalogue, { isPlus }).
 
   let body: z.infer<typeof BodySchema>;
   try {

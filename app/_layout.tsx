@@ -8,9 +8,10 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Appearance, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Appearance, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { reportError } from '@/lib/report';
+import { services } from '@/lib/services';
 import { dark, light, ThemeModeProvider, type, useTheme } from '@/theme';
 
 // expo-router renders this in place of a route that threw during render. It
@@ -71,6 +72,19 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  // On foreground, re-read the authoritative entitlement so a subscription
+  // bought or lapsed elsewhere converges without a relaunch (plan B2).
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void services()
+          .then((s) => s.refreshEntitlement())
+          .catch((error: unknown) => reportError(error, { op: 'foregroundEntitlement' }));
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   if (!fontsLoaded && !fontError) {
     return null; // splash is still visible

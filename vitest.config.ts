@@ -11,6 +11,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  // React Native's global. Under Node it is undefined; define it so modules
+  // that branch on __DEV__ (revenuecat dev override, report sink) can be tested.
+  define: {
+    __DEV__: false,
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
