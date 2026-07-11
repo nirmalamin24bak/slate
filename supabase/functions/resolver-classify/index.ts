@@ -112,7 +112,7 @@ async function systemPrompt(): Promise<string> {
  * refs — the cache is global). Failures are swallowed: the cache is an
  * optimisation, never the answer.
  */
-async function maybeCacheWrite(line: string, reply: string): Promise<void> {
+async function maybeCacheWrite(userId: string, line: string, reply: string): Promise<void> {
   // F1/F4: only short, canonical keys may enter the global cache. The SQL
   // function re-checks the length; this just saves the round trip.
   if (line.length > 64 || !isCanonical(line)) return;
@@ -129,7 +129,11 @@ async function maybeCacheWrite(line: string, reply: string): Promise<void> {
   const context = r.context === 'outside' ? 'outside' : 'home';
   if (contextOf(line) !== context) return;
 
+  // p_user drives the N-distinct-user quorum (plan D5): a (phrase, ref) pair
+  // only promotes to the live cache once several distinct users agree, so one
+  // account cannot poison a global key.
   await service.rpc('resolver_cache_write', {
+    p_user: userId,
     p_key: line,
     p_intent: r.intent,
     p_ref: typeof r.ref === 'string' ? r.ref : null,
@@ -207,7 +211,7 @@ Deno.serve(async (req) => {
 
     // Fire-and-forget would risk the isolate freezing before the write lands;
     // await it, but never let it fail the request.
-    await maybeCacheWrite(body.line, reply).catch(() => undefined);
+    await maybeCacheWrite(userData.user.id, body.line, reply).catch(() => undefined);
 
     return json(200, { reply });
   } catch (error) {
