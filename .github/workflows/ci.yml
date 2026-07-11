@@ -33,6 +33,19 @@ jobs:
       - name: Test (with engine coverage gate)
         run: npx vitest run --coverage --passWithNoTests
 
+      # Edge functions are excluded from tsc/eslint (Deno runtime, npm: imports).
+      # Typecheck them with Deno so the one path touching keys + PII + the LLM
+      # can't ship a type error unreviewed.
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Edge function typecheck + lint
+        run: |
+          deno check supabase/functions/**/*.ts
+          deno lint supabase/functions/
+
       # Fails on high/critical. Moderates stay visible in the log; the only
       # current one is uuid<11.1.1 via expo's xcode config plugin — build-time
       # tooling, never in the shipped bundle (see commit history).
@@ -54,3 +67,38 @@ jobs:
             exit 1
           fi
           echo 'Secret scan clean.'
+
+  # Deploy migrations + edge functions to production, only after `check` passes
+  # and only on merge to main. Before this, both were manual from a laptop with
+  # no audit trail and no guarantee prod matched main. Requires repo secrets:
+  # SUPABASE_ACCESS_TOKEN (a personal access token) and SUPABASE_PROJECT_REF.
+  deploy:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Push migrations
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy edge functions
+        run: |
+          supabase functions deploy resolver-classify
+          supabase functions deploy delete-account
+          supabase functions deploy revenuecat-webhook
+          supabase functions deploy entitlement-refresh
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

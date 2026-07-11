@@ -14,6 +14,7 @@ import { resolve } from '../resolver';
 import { edgeTransport } from '../resolver/transport';
 import { refreshServerEntitlement } from './entitlementSync';
 import { newId } from './ids';
+import { refreshRemoteConfig } from './remoteConfig';
 import { reportError } from './report';
 import { configurePurchases } from './revenuecat';
 import { supabase, ensureAnonymousSession } from './supabase';
@@ -97,6 +98,7 @@ async function build(): Promise<Services> {
   if (sessionUserId) {
     void configurePurchases(sessionUserId);
     void refreshServerEntitlement(supabase); // authoritative Plus from the server
+    void refreshRemoteConfig(supabase); // breach banner + resolver flag
   }
 
   // Reference mirrors: refresh best-effort; a stale mirror still works and
@@ -178,7 +180,7 @@ async function build(): Promise<Services> {
       }
     },
     async refreshEntitlement() {
-      await refreshServerEntitlement(supabase);
+      await Promise.all([refreshServerEntitlement(supabase), refreshRemoteConfig(supabase)]);
     },
   };
 }

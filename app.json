@@ -11,8 +11,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sonalsystems.slate",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "Slate uses the camera to scan barcodes and nutrition labels."
+        "NSCameraUsageDescription": "Slate uses the camera to scan barcodes and nutrition labels.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

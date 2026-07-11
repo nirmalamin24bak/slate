@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Appearance, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useRemoteConfig } from '@/lib/remoteConfig';
 import { reportError } from '@/lib/report';
 import { services } from '@/lib/services';
 import { dark, light, ThemeModeProvider, type, useTheme } from '@/theme';
@@ -43,11 +44,25 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => voi
 // swaps in (spec/03: tabular figures, no jitter).
 SplashScreen.preventAutoHideAsync();
 
+function BreachBanner() {
+  const { breachBanner } = useRemoteConfig();
+  const theme = useTheme();
+  if (!breachBanner) return null;
+  // Remote-controlled security notice (docs/breach-playbook.md). Plain, factual,
+  // dismissed only by the flag going null server-side.
+  return (
+    <View style={[styles.banner, { backgroundColor: theme.colors.ink }]}>
+      <Text style={[type.label, { color: theme.colors.bg }]}>{breachBanner}</Text>
+    </View>
+  );
+}
+
 function ThemedStack() {
   const theme = useTheme();
   return (
     <>
       <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
+      <BreachBanner />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -108,6 +123,11 @@ const styles = StyleSheet.create({
   fallbackHint: {
     textAlign: 'center',
     marginBottom: 16,
+  },
+  banner: {
+    paddingTop: 56,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
   fallbackButton: {
     height: 56,
