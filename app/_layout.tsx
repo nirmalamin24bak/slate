@@ -8,8 +8,34 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Appearance, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ThemeModeProvider, useTheme } from '@/theme';
+import { reportError } from '@/lib/report';
+import { dark, light, ThemeModeProvider, type, useTheme } from '@/theme';
+
+// expo-router renders this in place of a route that threw during render. It
+// sits above the theme provider and must survive a broken tree, so it reads
+// the scheme straight from Appearance and pulls raw palette — no hooks, no
+// context. Voice: state the fact, offer the action, no apology (BRAND-VOICE 3).
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  reportError(error, { boundary: 'root' });
+  const colors = Appearance.getColorScheme() === 'dark' ? dark : light;
+  return (
+    <View style={[styles.fallback, { backgroundColor: colors.bg }]}>
+      <Text style={[type.body, { color: colors.ink }]}>Slate stopped.</Text>
+      <Text style={[type.body, styles.fallbackHint, { color: colors.inkMute }]}>
+        Your journal is saved. Reopen to continue.
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={retry}
+        style={[styles.fallbackButton, { backgroundColor: colors.ink }]}
+      >
+        <Text style={[type.body, { color: colors.bg }]}>Reopen</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 // Keep the native splash up until fonts are ready. The journal must never
 // flash a fallback face — numbers in the wrong font jitter when Inter Tight
@@ -56,3 +82,24 @@ export default function RootLayout() {
     </ThemeModeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  fallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 8,
+  },
+  fallbackHint: {
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  fallbackButton: {
+    height: 56,
+    paddingHorizontal: 32,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
