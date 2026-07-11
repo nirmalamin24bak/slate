@@ -11,13 +11,23 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { SqlAdapter } from '../db/adapter';
+import { runTransaction, type SqlAdapter } from '../db/adapter';
 import { supabase } from './supabase';
 
 // User tables mirrored locally (spec/04). Reference mirrors and
 // resolution_cache carry no user_id and are left — they're shared, not
-// personal.
-const USER_TABLES = ['entries', 'weights', 'profiles', 'kitchen'] as const;
+// personal. custom_dishes/custom_dish_ingredients are listed so the wipe stays
+// correct once Phase 5 syncs them locally (the server cascade already covers
+// them); a DELETE against a table the mirror doesn't have yet is a harmless
+// no-op via IF-absent guard below.
+const USER_TABLES = [
+  'entries',
+  'weights',
+  'profiles',
+  'kitchen',
+  'custom_dishes',
+  'custom_dish_ingredients',
+] as const;
 
 // Slate's AsyncStorage keys (onboarding draft/flag, theme). Delete removes the
 // user's own state; the theme preference is harmless but goes too for a clean
@@ -36,14 +46,26 @@ export class DeleteFailed extends Error {}
  * then left untouched.
  */
 export async function deleteAccount(adapter: SqlAdapter): Promise<void> {
-  const { data, error } = await supabase.functions.invoke('delete-account', { body: {} });
+  // confirm:true is required server-side so a bare replayed POST cannot wipe an
+  // account (the delete-account function rejects a missing flag).
+  const { data, error } = await supabase.functions.invoke('delete-account', {
+    body: { confirm: true },
+  });
   if (error || !(data as { deleted?: boolean } | null)?.deleted) {
     throw new DeleteFailed('server delete did not confirm');
   }
 
-  for (const table of USER_TABLES) {
-    await adapter.run(`DELETE FROM ${table}`);
-  }
+  // Local wipe is one transaction: a crash mid-loop must not leave the device
+  // holding some erased-user rows under the next (new-person) session.
+  await runTransaction(adapter, async () => {
+    for (const table of USER_TABLES) {
+      const exists = await adapter.get<{ name: string }>(
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`,
+        [table],
+      );
+      if (exists) await adapter.run(`DELETE FROM ${table}`);
+    }
+  });
   await AsyncStorage.multiRemove([...LOCAL_KEYS]);
   await supabase.auth.signOut();
 }

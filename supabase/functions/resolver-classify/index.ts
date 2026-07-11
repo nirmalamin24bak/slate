@@ -48,8 +48,10 @@ const service = createClient(supabaseUrl, serviceKey, {
   auth: { persistSession: false },
 });
 
-// Mirrors src/resolver/context.ts — the cache-consistency rule ("only cache
-// what a token scan can reconstruct") must hold on the writing side.
+// Mirrors src/resolver/context.ts OUTSIDE_TOKENS_LIST — the cache-consistency
+// rule ("only cache what a token scan can reconstruct") must hold on the
+// writing side. This list is PINNED by context.test.ts; if that test changes,
+// update this copy in the same commit.
 const OUTSIDE_TOKENS = new Set([
   'swiggy',
   'zomato',
