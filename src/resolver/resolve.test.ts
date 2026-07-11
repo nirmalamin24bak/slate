@@ -215,6 +215,15 @@ describe('resolve — failure honesty', () => {
     expect(out[0]!.retryable).toBe(true);
   });
 
+  it('disabled (kill switch) → unresolved, NOT retryable', async () => {
+    const transport: ClassifyTransport = {
+      classify: () => Promise.reject(new TransportError('disabled')),
+    };
+    const out = await resolve('2 roti', { cache: memoryCache(), transport, catalogue });
+    expect(out[0]!.resolution.intent).toBe('unresolved');
+    expect(out[0]!.retryable).toBe(false); // retrying a disabled resolver just thrashes
+  });
+
   it('timeout → unresolved, retryable (spec/09: >3s)', async () => {
     vi.useFakeTimers();
     try {

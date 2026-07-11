@@ -23,6 +23,7 @@ import {
   type EntryPatch,
 } from '../db/entriesRepo';
 import { getKitchen, getProfile, patchProfile, upsertWeight } from '../db/profileRepo';
+import { reportEvent } from '../lib/report';
 import { getExercise, getPackagedFood, loadDish } from '../db/referenceRepo';
 import type { EntryRow, ExerciseRow } from '../db/rows';
 import { toKitchen } from '../db/rows';
@@ -147,7 +148,21 @@ export class JournalStore {
       // drain requeues with the attempt count intact — resolveRow must not
       // also push, or the row would sit in the queue twice.
       const stillQueued = await this.resolveRow(row.id, false);
-      if (stillQueued) this.queue.requeue(item, this.deps.now().getTime());
+      if (stillQueued) {
+        const requeued = this.queue.requeue(item, this.deps.now().getTime());
+        if (!requeued) {
+          // Hit the attempt cap. Stop auto-retrying: clear the retryable flag
+          // so the drain guard skips it. The line stays unresolved with its
+          // manual ↻ (spec/09); it just no longer wakes the app on a timer.
+          await patchEntry(
+            this.deps.adapter,
+            row.id,
+            { retryable: 0 },
+            this.deps.now().toISOString(),
+          );
+          reportEvent('resolver_retry_exhausted', { entryId: row.id });
+        }
+      }
     }
   }
 

@@ -16,6 +16,11 @@ async function replaceRows(
   columns: readonly string[],
   rows: readonly Record<string, SqlValue>[],
 ): Promise<void> {
+  // An empty payload is a transient pull failure (network blip, RLS hiccup that
+  // returned [] without throwing), never a legitimately-emptied catalogue —
+  // reference data only grows. Truncating here would wipe the mirror and degrade
+  // every line to unresolved until a good pull lands. Keep what we have.
+  if (rows.length === 0) return;
   await runTransaction(adapter, async () => {
     await adapter.run(`DELETE FROM ${table}`);
     const placeholders = columns.map(() => '?').join(',');

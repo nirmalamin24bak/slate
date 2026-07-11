@@ -24,6 +24,15 @@ import { providerFromEnv } from './providers.ts';
 
 const RATE_LIMIT_PER_MINUTE = 30;
 const MODEL_TIMEOUT_MS = 2500; // p95 budget is 1200ms; this is the hard stop
+
+// Kill switch (plan A5). Set RESOLVER_DISABLED=1 in the function's secrets to
+// stop all model calls without a redeploy — a provider outage, a cost spike,
+// or a bad model. Clients degrade to cache + local rules and honest-unresolved
+// (503 is treated as non-retryable by the transport, so the queue does not
+// hammer a deliberately-disabled resolver).
+function resolverDisabled(): boolean {
+  return Deno.env.get('RESOLVER_DISABLED') === '1';
+}
 const CATALOGUE_TTL_MS = 5 * 60 * 1000;
 const CONFIDENCE_FLOOR = 0.6;
 
@@ -156,6 +165,10 @@ Deno.serve(async (req) => {
   } catch {
     return json(400, { error: 'invalid input' });
   }
+
+  // Kill switch before any spend: refuse cheaply, before the rate RPC and the
+  // model call. Clients treat 503 as a signal to fall back, not to retry.
+  if (resolverDisabled()) return json(503, { error: 'resolver disabled' });
 
   const { data: allowed, error: rateError } = await service.rpc('resolver_rate_check', {
     p_user: userData.user.id,

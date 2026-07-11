@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { backoffMs, RetryQueue } from './retryQueue';
+import { backoffMs, MAX_ATTEMPTS, RetryQueue } from './retryQueue';
 
 // spec/09: resolver failures queue for retry — oldest first, exponential
 // backoff, rate-limited drain, no user-facing error. Pure scheduling logic;
@@ -45,6 +45,41 @@ describe('RetryQueue', () => {
     q.push('b', 0);
     expect(q.size).toBe(2);
     q.due(1000);
+    expect(q.size).toBe(0);
+  });
+
+  it('push dedups: the same item queued twice is one entry', () => {
+    const q = new RetryQueue<string>();
+    q.push('a', 0);
+    q.push('a', 5); // duplicate from another code path
+    expect(q.size).toBe(1);
+    expect(q.has('a')).toBe(true);
+    expect(q.has('b')).toBe(false);
+  });
+
+  it('requeue returns true under the cap and re-queues', () => {
+    const q = new RetryQueue<string>();
+    q.push('a', 0);
+    const [first] = q.due(1000);
+    expect(q.requeue(first!, 1000)).toBe(true);
+    expect(q.size).toBe(1);
+  });
+
+  it('requeue returns false at the attempt cap and drops the item', () => {
+    const q = new RetryQueue<string>();
+    q.push('a', 0); // attempt 0
+    // Each drain-then-requeue bumps the attempt: 0→1, 1→2, … Requeue succeeds
+    // while the resulting attempt stays under MAX_ATTEMPTS, then refuses.
+    let now = 0;
+    for (let resultingAttempt = 1; resultingAttempt < MAX_ATTEMPTS; resultingAttempt++) {
+      now += backoffMs(resultingAttempt) + 1;
+      const entry = q.due(now)[0]!;
+      expect(q.requeue(entry, now)).toBe(true);
+    }
+    // The next requeue would reach MAX_ATTEMPTS: refused, item dropped.
+    now += backoffMs(MAX_ATTEMPTS) + 1;
+    const last = q.due(now)[0]!;
+    expect(q.requeue(last, now)).toBe(false);
     expect(q.size).toBe(0);
   });
 });
