@@ -24,6 +24,7 @@ import {
   getProfile,
   listDirtyWeights,
   listWeights,
+  markWeightsSynced,
   patchProfile,
   upsertWeight,
 } from './profileRepo';
@@ -41,7 +42,7 @@ import {
 import type { SqlValue } from './adapter';
 import { adoptPendingUser, PENDING_USER_ID } from './adoption';
 import { migrate, SCHEMA_VERSION } from './schema';
-import { pullReference, pushDirty, type RemoteDb } from './sync';
+import { pullReference, pullUserData, pushDirty, type RemoteDb } from './sync';
 import type { EntryRow, WeightRow } from './rows';
 import { toKitchen } from './rows';
 
@@ -50,6 +51,7 @@ import { openTestDb } from '../../test/helpers/betterSqliteAdapter';
 const USER = 'user-a';
 const T0 = '2026-07-10T09:00:00.000Z';
 const T1 = '2026-07-10T09:05:00.000Z';
+const T2 = '2026-07-10T09:10:00.000Z';
 
 function entry(overrides: Partial<EntryRow>): EntryRow {
   return {
@@ -113,7 +115,7 @@ describe('entriesRepo', () => {
   it('patches resolution fields and marks the row dirty', async () => {
     const db = await openTestDb();
     await insertEntry(db, entry({ id: 'e1' }));
-    await markEntriesSynced(db, ['e1']);
+    await markEntriesSynced(db, [{ id: 'e1', updated_at: T0 }]);
     await patchEntry(db, 'e1', { status: 'resolved', kcal: 220, resolved_ref: 'dish_roti' }, T1);
 
     const row = await getEntry(db, 'e1');
@@ -537,7 +539,7 @@ describe('referenceRepo', () => {
 });
 
 describe('sync', () => {
-  function fakeRemote(): RemoteDb & {
+  function fakeRemote(owned: Record<string, Record<string, SqlValue>[]> = {}): RemoteDb & {
     upserts: Record<string, Record<string, unknown>[]>;
   } {
     const upserts: Record<string, Record<string, unknown>[]> = {};
@@ -549,6 +551,9 @@ describe('sync', () => {
       async fetchAll(table) {
         const fixture = REFERENCE_FIXTURE as unknown as Record<string, Record<string, SqlValue>[]>;
         return fixture[table] ?? [];
+      },
+      async fetchOwned(table) {
+        return owned[table] ?? [];
       },
     };
   }
@@ -644,6 +649,160 @@ describe('sync', () => {
     expect(catalogue.dishes.size).toBe(1);
     expect(catalogue.exercises.size).toBe(1);
     expect(catalogue.packagedFoods.size).toBe(1);
+    db.close();
+  });
+
+  // A server entry row as fetchOwned returns it (no local-only columns).
+  function serverEntry(over: Partial<EntryRow>): Record<string, SqlValue> {
+    const { retryable: _r, dirty: _d, ...rest } = entry(over);
+    return rest as unknown as Record<string, SqlValue>;
+  }
+
+  it('pullUserData inserts server rows absent locally', async () => {
+    const db = await openTestDb();
+    await pullUserData(
+      db,
+      fakeRemote({ entries: [serverEntry({ id: 'srv1', raw_text: '2 roti' })] }),
+      USER,
+    );
+    const row = await getEntry(db, 'srv1');
+    expect(row?.raw_text).toBe('2 roti');
+    expect(row?.dirty).toBe(0); // pulled rows are clean
+    db.close();
+  });
+
+  it('pullUserData takes a strictly-newer server row (last-write-wins)', async () => {
+    const db = await openTestDb();
+    await insertEntry(db, entry({ id: 'e1', raw_text: 'old', updated_at: T0 }));
+    await markEntriesSynced(db, [{ id: 'e1', updated_at: T0 }]); // clean
+    await pullUserData(
+      db,
+      fakeRemote({ entries: [serverEntry({ id: 'e1', raw_text: 'new', updated_at: T1 })] }),
+      USER,
+    );
+    expect((await getEntry(db, 'e1'))?.raw_text).toBe('new');
+    db.close();
+  });
+
+  it('pullUserData ignores an older-or-equal server row', async () => {
+    const db = await openTestDb();
+    await insertEntry(db, entry({ id: 'e1', raw_text: 'local', updated_at: T1 }));
+    await markEntriesSynced(db, [{ id: 'e1', updated_at: T1 }]);
+    await pullUserData(
+      db,
+      fakeRemote({ entries: [serverEntry({ id: 'e1', raw_text: 'stale', updated_at: T0 })] }),
+      USER,
+    );
+    expect((await getEntry(db, 'e1'))?.raw_text).toBe('local');
+    db.close();
+  });
+
+  it('pullUserData never clobbers a locally-dirty row, even with a newer server copy', async () => {
+    const db = await openTestDb();
+    await insertEntry(db, entry({ id: 'e1', raw_text: 'my unsynced edit', updated_at: T1 }));
+    // left dirty (insert defaults dirty=1)
+    await pullUserData(
+      db,
+      fakeRemote({ entries: [serverEntry({ id: 'e1', raw_text: 'server', updated_at: T2 })] }),
+      USER,
+    );
+    const row = await getEntry(db, 'e1');
+    expect(row?.raw_text).toBe('my unsynced edit'); // dirty wins until it pushes
+    expect(row?.dirty).toBe(1);
+    db.close();
+  });
+
+  it('pullUserData applies a server tombstone (deleted_at) so the row leaves the day', async () => {
+    const db = await openTestDb();
+    await insertEntry(db, entry({ id: 'e1', updated_at: T0 }));
+    await markEntriesSynced(db, [{ id: 'e1', updated_at: T0 }]);
+    await pullUserData(
+      db,
+      fakeRemote({ entries: [serverEntry({ id: 'e1', updated_at: T1, deleted_at: T1 })] }),
+      USER,
+    );
+    expect(await listDay(db, USER, '2026-07-10')).toHaveLength(0);
+    db.close();
+  });
+
+  it('push then re-push is idempotent (crash after upsert leaves the row dirty)', async () => {
+    const db = await openTestDb();
+    await ensureUserRows(db, USER, T0);
+    await insertEntry(db, entry({ id: 'e1', updated_at: T0 }));
+    // Simulate a crash after the network upsert but before markSynced: the row
+    // is still dirty. The next push re-sends it — the server upsert is
+    // idempotent, and nothing was lost.
+    const remote1 = fakeRemote();
+    await remote1.upsert('entries', [{ id: 'e1' }]); // "sent" but not marked
+    expect((await getEntry(db, 'e1'))?.dirty).toBe(1);
+    const remote2 = fakeRemote();
+    await pushDirty(db, remote2, USER);
+    expect(remote2.upserts['entries']).toHaveLength(1);
+    expect(await listDirtyEntries(db)).toHaveLength(0); // now marked clean
+    db.close();
+  });
+
+  it('an edit racing between push and mark keeps the row dirty (no lost edit)', async () => {
+    const db = await openTestDb();
+    await ensureUserRows(db, USER, T0);
+    await insertEntry(db, entry({ id: 'e1', updated_at: T0 }));
+    // Read the dirty snapshot as pushDirty would, at updated_at T0.
+    const snapshot = await listDirtyEntries(db);
+    // User edits the row before the mark — updated_at moves to T1, dirty=1.
+    await patchEntry(db, 'e1', { raw_text: 'edited mid-push' }, T1);
+    // The guarded mark uses the snapshot's T0, which no longer matches.
+    await markEntriesSynced(
+      db,
+      snapshot.map((e) => ({ id: e.id, updated_at: e.updated_at })),
+    );
+    expect((await getEntry(db, 'e1'))?.dirty).toBe(1); // edit survives, re-pushes
+    db.close();
+  });
+
+  it('weights converge on the natural key across devices', async () => {
+    const db = await openTestDb();
+    await upsertWeight(db, {
+      id: 'device-a-uuid',
+      user_id: USER,
+      log_date: '2026-07-10',
+      weight_kg: 80,
+      source: 'journal',
+      created_at: T0,
+      updated_at: T0,
+      deleted_at: null,
+      dirty: 0,
+    });
+    await markWeightsSynced(db, [{ id: 'device-a-uuid', updated_at: T0 }]); // clean
+    // Device B's row for the same day: different id, newer timestamp.
+    await pullUserData(
+      db,
+      fakeRemote({
+        weights: [
+          {
+            id: 'device-b-uuid',
+            user_id: USER,
+            log_date: '2026-07-10',
+            weight_kg: 81,
+            source: 'journal',
+            created_at: T1,
+            updated_at: T1,
+            deleted_at: null,
+          },
+        ],
+      }),
+      USER,
+    );
+    const weights = await listWeights(db, USER);
+    expect(weights).toHaveLength(1); // one row per (user, day)
+    expect(weights[0]?.weight_kg).toBe(81); // newer wins
+    db.close();
+  });
+
+  it('an empty pull changes nothing', async () => {
+    const db = await openTestDb();
+    await insertEntry(db, entry({ id: 'e1', raw_text: 'kept', updated_at: T0 }));
+    await pullUserData(db, fakeRemote(), USER);
+    expect((await getEntry(db, 'e1'))?.raw_text).toBe('kept');
     db.close();
   });
 });

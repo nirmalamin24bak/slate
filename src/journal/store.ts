@@ -70,6 +70,11 @@ export class JournalStore {
     return () => this.listeners.delete(listener);
   }
 
+  /** Nudge subscribers to re-read (e.g. after a down-sync changed rows). */
+  emitChange(): void {
+    this.emit({ type: 'change' });
+  }
+
   private emit(event: JournalEvent): void {
     for (const listener of this.listeners) listener(event);
   }
@@ -270,34 +275,60 @@ export class JournalStore {
 
     // Multi-entry split: the first segment stays on this row; the rest become
     // their own rows directly below it ("2 roti aur ek katori dal" → 2 lines).
+    // The position bump, the inserts, and the original's raw_text patch are one
+    // transaction — a crash mid-split otherwise leaves positions bumped with no
+    // extras inserted (a gap and a duplicate-position hazard). Capture the new
+    // ids so the apply loop targets rows directly, never by position arithmetic
+    // (which breaks if another line was added concurrently).
     const extras = segments.slice(1);
-    if (extras.length > 0) {
-      await adapter.run(
-        'UPDATE entries SET position = position + ? WHERE user_id = ? AND log_date = ? AND position > ?',
-        [extras.length, row.user_id, row.log_date, row.position],
-      );
-      for (const [i, segment] of extras.entries()) {
-        const nowIso = this.deps.now().toISOString();
-        await insertEntry(adapter, {
-          ...row,
-          id: this.deps.newId(),
-          position: row.position + 1 + i,
-          raw_text: segment.raw,
-          created_at: nowIso,
-          updated_at: nowIso,
-          dirty: 1,
-        });
+    const extraIds: string[] = [];
+    await adapter.transaction(async () => {
+      if (extras.length > 0) {
+        await adapter.run(
+          'UPDATE entries SET position = position + ? WHERE user_id = ? AND log_date = ? AND position > ?',
+          [extras.length, row.user_id, row.log_date, row.position],
+        );
+        for (const [i, segment] of extras.entries()) {
+          const nowIso = this.deps.now().toISOString();
+          const id = this.deps.newId();
+          extraIds.push(id);
+          await insertEntry(adapter, {
+            ...row,
+            id,
+            position: row.position + 1 + i,
+            raw_text: segment.raw,
+            // A fresh unresolved skeleton, not the parent's resolved state.
+            intent: 'unresolved',
+            status: 'resolving',
+            resolved_ref: null,
+            qty: null,
+            unit: null,
+            kcal: null,
+            protein_g: null,
+            carbs_g: null,
+            fat_g: null,
+            fiber_g: null,
+            sugar_g: null,
+            water_ml: null,
+            step_count: null,
+            sleep_minutes: null,
+            is_included: 0,
+            nickname: null,
+            created_at: nowIso,
+            updated_at: nowIso,
+            retryable: 0,
+            dirty: 1,
+          });
+        }
       }
-    }
+      await patchEntry(adapter, entryId, { raw_text: first.raw }, this.deps.now().toISOString());
+    });
 
-    await patchEntry(adapter, entryId, { raw_text: first.raw }, this.deps.now().toISOString());
-
-    // Apply each segment to its row (original + the extras just inserted).
-    const dayRows = await listDay(adapter, row.user_id, row.log_date);
+    // Apply each segment to its row: the original for i===0, else the extra we
+    // just inserted (matched by captured id, not by recomputed position).
     let anyRetryable = false;
     for (const [i, segment] of segments.entries()) {
-      const target =
-        i === 0 ? row : dayRows.find((r) => r.position === row.position + i && r.id !== row.id);
+      const target = i === 0 ? row : await getEntry(adapter, extraIds[i - 1] ?? '');
       if (!target) continue;
       const queued = await this.applyResolution(target, segment);
       if (i === 0) anyRetryable = queued;

@@ -8,11 +8,12 @@ import type { SqlAdapter, SqlValue } from '../db/adapter';
 import { sqliteCacheStore } from '../db/cacheStore';
 import { ensureUserRows } from '../db/profileRepo';
 import { loadCatalogue } from '../db/referenceRepo';
-import { pullReference, pushDirty, type RemoteDb } from '../db/sync';
+import { pullReference, pullUserData, pushDirty, type RemoteDb } from '../db/sync';
 import { JournalStore } from '../journal/store';
 import { resolve } from '../resolver';
 import { edgeTransport } from '../resolver/transport';
 import { newId } from './ids';
+import { reportError } from './report';
 import { configurePurchases } from './revenuecat';
 import { supabase, ensureAnonymousSession } from './supabase';
 
@@ -21,8 +22,26 @@ import { supabase, ensureAnonymousSession } from './supabase';
 // in src/db/adoption.ts (re-exported here for callers that had it before).
 export { PENDING_USER_ID } from '../db/adoption';
 
+// User-owned tables push through updated_at-guarded RPCs (migration
+// 20260711000006) so a stale device cannot overwrite a newer server row.
+// Reference mirrors are select-only and keep the plain upsert.
+const GUARDED_UPSERT: Record<string, string> = {
+  entries: 'sync_upsert_entries',
+  weights: 'sync_upsert_weights',
+  profiles: 'sync_upsert_profiles',
+  kitchen: 'sync_upsert_kitchen',
+};
+
+const PAGE_SIZE = 1000; // supabase-js caps a select at 1000; page past it.
+
 const supabaseRemote: RemoteDb = {
   async upsert(table, rows) {
+    const rpc = GUARDED_UPSERT[table];
+    if (rpc) {
+      const { error } = await supabase.rpc(rpc, { rows });
+      if (error) throw new Error(`sync push ${table}: ${error.message}`);
+      return;
+    }
     const { error } = await supabase.from(table).upsert(rows as Record<string, SqlValue>[]);
     if (error) throw new Error(`sync push ${table}: ${error.message}`);
   },
@@ -30,6 +49,21 @@ const supabaseRemote: RemoteDb = {
     const { data, error } = await supabase.from(table).select(columns);
     if (error) throw new Error(`sync pull ${table}: ${error.message}`);
     return (data ?? []) as unknown as Record<string, SqlValue>[];
+  },
+  async fetchOwned(table, userId) {
+    const all: Record<string, SqlValue>[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .eq('user_id', userId)
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw new Error(`sync pull ${table}: ${error.message}`);
+      const page = (data ?? []) as unknown as Record<string, SqlValue>[];
+      all.push(...page);
+      if (page.length < PAGE_SIZE) break; // short page = last page
+    }
+    return all;
   },
 };
 
@@ -64,7 +98,18 @@ async function build(): Promise<Services> {
   try {
     await pullReference(adapter, supabaseRemote);
   } catch (error) {
-    console.warn('slate: reference pull deferred:', error);
+    reportError(error, { op: 'pullReference' });
+  }
+
+  // User data down-sync (spec/04): hydrate this device from the server so a
+  // reinstall or a second device shows the full journal instead of nothing.
+  // Best-effort; a locally-dirty row is never clobbered.
+  if (sessionUserId) {
+    try {
+      await pullUserData(adapter, supabaseRemote, sessionUserId);
+    } catch (error) {
+      reportError(error, { op: 'pullUserData' });
+    }
   }
 
   const cache = sqliteCacheStore(adapter);
@@ -117,8 +162,11 @@ async function build(): Promise<Services> {
       if (currentUserId !== PENDING_USER_ID) {
         try {
           await pushDirty(adapter, supabaseRemote, currentUserId);
+          // Pull after push so a multi-device edit converges the same tick.
+          await pullUserData(adapter, supabaseRemote, currentUserId);
+          store.emitChange();
         } catch (error) {
-          console.warn('slate: push deferred:', error);
+          reportError(error, { op: 'syncTick' });
         }
       }
     },

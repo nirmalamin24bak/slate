@@ -257,11 +257,95 @@ export async function listDirtyEntries(adapter: SqlAdapter): Promise<EntryRow[]>
   return adapter.all<EntryRow>('SELECT * FROM entries WHERE dirty = 1');
 }
 
+/** A row that was pushed, identified by id + the updated_at that was sent. */
+export interface SyncedRef {
+  id: string;
+  updated_at: string;
+}
+
+/**
+ * Clear the dirty flag ONLY on rows whose updated_at still matches what was
+ * pushed. If the user edited a row between the dirty read and this mark,
+ * patchEntry bumped updated_at (and re-set dirty=1); the guard misses, the row
+ * stays dirty, and the newer edit is pushed on the next tick. Without the
+ * guard the edit is silently lost.
+ */
 export async function markEntriesSynced(
   adapter: SqlAdapter,
-  ids: readonly string[],
+  refs: readonly SyncedRef[],
 ): Promise<void> {
-  for (const id of ids) {
-    await adapter.run('UPDATE entries SET dirty = 0 WHERE id = ?', [id]);
+  for (const ref of refs) {
+    await adapter.run('UPDATE entries SET dirty = 0 WHERE id = ? AND updated_at = ?', [
+      ref.id,
+      ref.updated_at,
+    ]);
+  }
+}
+
+/**
+ * Merge server rows into SQLite (down-sync). Per row: insert if absent; skip
+ * if the local copy is dirty (an unpushed local edit always wins until it
+ * pushes); otherwise take the server row when it is strictly newer. Local-only
+ * columns (dirty, retryable) are never written from the server. Callers wrap
+ * this in a transaction.
+ */
+export async function pullMergeEntries(
+  adapter: SqlAdapter,
+  rows: readonly Record<string, SqlValue>[],
+): Promise<void> {
+  for (const row of rows) {
+    await adapter.run(
+      `INSERT INTO entries (
+        id, user_id, log_date, position, raw_text, nickname, intent, status,
+        resolved_ref, qty, unit, context,
+        kcal, protein_g, carbs_g, fat_g, fiber_g, sugar_g,
+        water_ml, step_count, sleep_minutes, is_included,
+        calc_version, was_calibrated, created_at, updated_at, deleted_at,
+        retryable, dirty
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0)
+      ON CONFLICT(id) DO UPDATE SET
+        log_date = excluded.log_date, position = excluded.position,
+        raw_text = excluded.raw_text, nickname = excluded.nickname,
+        intent = excluded.intent, status = excluded.status,
+        resolved_ref = excluded.resolved_ref, qty = excluded.qty,
+        unit = excluded.unit, context = excluded.context, kcal = excluded.kcal,
+        protein_g = excluded.protein_g, carbs_g = excluded.carbs_g,
+        fat_g = excluded.fat_g, fiber_g = excluded.fiber_g,
+        sugar_g = excluded.sugar_g, water_ml = excluded.water_ml,
+        step_count = excluded.step_count, sleep_minutes = excluded.sleep_minutes,
+        is_included = excluded.is_included, calc_version = excluded.calc_version,
+        was_calibrated = excluded.was_calibrated, updated_at = excluded.updated_at,
+        deleted_at = excluded.deleted_at
+      WHERE entries.dirty = 0 AND excluded.updated_at > entries.updated_at`,
+      [
+        row['id'] ?? null,
+        row['user_id'] ?? null,
+        row['log_date'] ?? null,
+        row['position'] ?? null,
+        row['raw_text'] ?? null,
+        row['nickname'] ?? null,
+        row['intent'] ?? null,
+        row['status'] ?? null,
+        row['resolved_ref'] ?? null,
+        row['qty'] ?? null,
+        row['unit'] ?? null,
+        row['context'] ?? null,
+        row['kcal'] ?? null,
+        row['protein_g'] ?? null,
+        row['carbs_g'] ?? null,
+        row['fat_g'] ?? null,
+        row['fiber_g'] ?? null,
+        row['sugar_g'] ?? null,
+        row['water_ml'] ?? null,
+        row['step_count'] ?? null,
+        row['sleep_minutes'] ?? null,
+        row['is_included'] ?? 0,
+        row['calc_version'] ?? null,
+        row['was_calibrated'] ?? 0,
+        row['created_at'] ?? null,
+        row['updated_at'] ?? null,
+        row['deleted_at'] ?? null,
+      ],
+    );
   }
 }
