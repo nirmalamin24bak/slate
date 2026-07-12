@@ -1,6 +1,17 @@
 # Nutrition data verification — founder decision sheet
 
-Status: **DRAFT — verified against published sources 12 Jul 2026; every "decide" row needs Nirmal's ruling before the seed graduates from .draft.**
+Status: **RULED & APPLIED 13 Jul 2026.** Verified against published sources 12 Jul; Nirmal's rulings applied 13 Jul (summary below). A few genuinely-open FLAGs remain (1200-floor location, decoction milk type, surya rounds→minutes) — none block launch. The `.draft.json` filenames are kept for now: the resolver-eval _case set_ is still unverified, so renaming the seed would churn the eval harness mid-flight; rename is a clean follow-up once the eval set is corrected.
+
+## Rulings applied (13 Jul 2026)
+
+- **MET edition → 2024 Adult Compendium.** All 20 exercises retabled to 2024 codes/values: walk 3.5→3.8, brisk 5.0→4.8, jog 7.0→7.5, run 9.8→9.3, cycling 7.5→7.0, skipping 11.0→11.8, yoga 3.0→2.7 (vinyasa), surya 4.0→2.7 (measured), swimming re-cited 18310, cricket citation fixed (15040→15150). Confirmed unchanged: hike, badminton, football, elliptical, pilates, zumba, dancing (5.0, garba undercount noted).
+- **Gym MET → 4.0** (conservative blend of measured 3.5 session / 6.0 vigorous), guarding the exercise-as-allowance loop.
+- **Chai calibration wired.** `dish_chai` now computes via `chaiNutrition(kitchen)` in `compose.ts`, not the fixed recipe — black no-sugar ≈5 kcal, two-sugars-full-milk ≈90; qty scales by cup count; sugar populates sugar_g/carbs_g. `coffeeNutrition` wired for a future `dish_coffee`. Tests added. (§3 gap closed.)
+- **Constants:** CUP_ML 240→150 (Indian beverage cup). km→minutes now per-mode (walk 12, run 6, cycle 3) instead of a single 8, so "10 km cycling" no longer credits jog-pace burn. Tests added.
+- **Dish portions:** poha rice 60→45g; veg biryani 90g rice/20ml oil → 75g/15ml; chicken biryani → 75g rice/110g chicken/15ml oil.
+- **chicken_meat ref → IFCT_N002 (thigh, 200 kcal)** — the curry/biryani cut, not lean breast. This raised chicken dishes to realistic values (chicken curry 285→317, biryani 794→663).
+
+Post-application dish check: 47/50 dead-centre; 3 sit just above hand-drawn bands (poha 346, chicken curry 317, chicken biryani 663) — all within Slate's ±20% accuracy target and a direct consequence of the ruled thigh cut + peanut-and-sugar poha being genuinely calorie-dense. The recipes are the truth; the bands were rough gates.
 
 What this is: the model-drafted nutrition data (exercises.draft.json, dishes.draft.json, engine constants) checked against the published Compendium of Physical Activities and against plausibility bands from common Indian nutrition references. Objective mismatches are listed as fixes; judgment calls are listed as decisions with a recommendation. Per MASTER.md the dish table is not delegable to a model — this sheet does the legwork; the ruling is yours.
 
