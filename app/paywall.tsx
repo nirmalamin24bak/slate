@@ -38,17 +38,15 @@ const FREE = [
   '30-day history',
 ] as const;
 
+// App Store 2.1: the paywall may only advertise features that actually work in
+// the shipping build. Widgets, Photo logging, Chat, Apple Health, and Custom
+// dishes are still stubs — list each again here as it ships. (Audit C1.)
 const PLUS = [
   'Stats',
   'Fiber & sugar',
   'Kitchen calibration',
   'Saved foods',
-  'Widgets',
-  'Photo logging',
-  'Chat',
-  'Apple Health',
   'Full history',
-  'Custom dishes',
 ] as const;
 
 function Column({ title, items }: { title: string; items: readonly string[] }) {
