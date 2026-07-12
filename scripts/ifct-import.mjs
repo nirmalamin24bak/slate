@@ -4,10 +4,16 @@
 //   node scripts/ifct-import.mjs --input path/to/ifct2017.csv
 //     [--mapping scripts/ifct/mapping.json]   header overrides, see DEFAULT_MAPPING
 //     [--out supabase/seed/01_ingredients.sql]
+//     [--supplemental scripts/ifct/supplemental.json]   non-IFCT rows (curd, toned milk, …)
 //     [--dishes supabase/seed/dishes.draft.json --ref-map scripts/ifct/ref-map.json]
 //
-// BLOCKED until the IFCT 2017 source file arrives from Nirmal (CSV export).
-// With --dishes, also verifies every dish ingredient ref maps to an imported id.
+// Source path (unblocked 12 Jul 2026): npm @ifct2017/compositions@2.0.9 (MIT),
+// vendored at scripts/ifct/data/ and converted by scripts/ifct/prepare-nodef.mjs.
+// Full chain:  prepare-nodef.mjs → this script → supabase/seed/01_ingredients.sql.
+// --supplemental appends documented non-IFCT rows (see supplemental.json notes):
+// IFCT covers ingredients, so curd/toned-milk/sugar/bread/noodles/cream need
+// label- or derivation-based values with lineage recorded per row.
+// With --dishes, also verifies every dish ingredient ref maps to a known id.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -37,6 +43,31 @@ const mapping = arg('mapping')
 const records = parseCsv(readFileSync(resolve(input), 'utf8'));
 const rows = toIngredientRows(records, mapping);
 console.log(`parsed ${rows.length} ingredients from ${input}`);
+
+// Non-IFCT rows (curd, toned milk, sugar, …) ride along with explicit lineage
+// notes in supplemental.json. Same shape and the same kcal sanity bound as the
+// imported rows; the note stays in the json, not the table.
+const supplementalPath = arg('supplemental');
+if (supplementalPath) {
+  const supplemental = JSON.parse(readFileSync(resolve(supplementalPath), 'utf8'));
+  for (const s of supplemental) {
+    if (!s.id || !s.name) throw new Error(`supplemental row missing id/name: ${JSON.stringify(s)}`);
+    if (typeof s.kcal_100g !== 'number' || s.kcal_100g < 0 || s.kcal_100g > 950)
+      throw new Error(`supplemental ${s.id}: kcal out of range`);
+    rows.push({
+      id: s.id,
+      name: s.name,
+      name_hi: s.name_hi ?? null,
+      kcal_100g: s.kcal_100g,
+      protein_100g: s.protein_100g,
+      carbs_100g: s.carbs_100g,
+      fat_100g: s.fat_100g,
+      fiber_100g: s.fiber_100g ?? null,
+      sugar_100g: s.sugar_100g ?? null,
+    });
+  }
+  console.log(`appended ${supplemental.length} supplemental ingredients from ${supplementalPath}`);
+}
 
 const out = resolve(arg('out') ?? 'supabase/seed/01_ingredients.sql');
 mkdirSync(dirname(out), { recursive: true });
