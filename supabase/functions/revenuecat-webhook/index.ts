@@ -8,6 +8,16 @@
 // row in the entitlements table with the service role. The authoritative Plus
 // check everywhere is `active AND (expires_at IS NULL OR expires_at > now())`,
 // so a missed EXPIRATION still lapses the row on time.
+//
+// Every write goes through apply_entitlement_event (migration ...0003), which
+// atomically dedupes exact event.id replays and rejects events older than the
+// one already applied (RC can deliver out of order — event timestamp, not
+// arrival, is the ordering key). This blunts a replay of a captured event
+// (M1/M4): re-sending a grant is a no-op, and a stale revoke can't clobber a
+// newer grant. The bearer secret is still the only sender authentication —
+// rotate REVENUECAT_WEBHOOK_SECRET on any suspicion of exposure (runbook:
+// docs/breach-playbook.md); a full HMAC body signature is the follow-up when
+// RC's signing secret is provisioned.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -64,24 +74,25 @@ interface RcEvent {
   entitlement_ids?: string[];
   entitlement_id?: string;
   expiration_at_ms?: number;
+  event_timestamp_ms?: number;
   environment?: string;
   transferred_from?: string[];
 }
 
+// Apply one grant/revoke through the guarded RPC (migration ...0003): it dedupes
+// exact event.id replays and rejects events older than the one already applied,
+// atomically. Returns true on success (including idempotent 'duplicate'/'stale'
+// no-ops — those are not failures, so we still 200 and RC stops retrying).
 async function upsertEntitlement(userId: string, active: boolean, e: RcEvent): Promise<boolean> {
-  const { error } = await service.from('entitlements').upsert(
-    {
-      user_id: userId,
-      product: ENTITLEMENT_ID,
-      active,
-      expires_at: e.expiration_at_ms ? new Date(e.expiration_at_ms).toISOString() : null,
-      environment: e.environment ?? null,
-      last_event: e.type,
-      event_id: e.id ?? null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'user_id' },
-  );
+  const { error } = await service.rpc('apply_entitlement_event', {
+    p_user_id: userId,
+    p_active: active,
+    p_expires_at: e.expiration_at_ms ? new Date(e.expiration_at_ms).toISOString() : null,
+    p_environment: e.environment ?? null,
+    p_event_type: e.type,
+    p_event_id: e.id ?? null,
+    p_event_ts_ms: e.event_timestamp_ms ?? null,
+  });
   return !error;
 }
 
