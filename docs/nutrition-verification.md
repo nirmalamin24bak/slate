@@ -29,6 +29,10 @@ Data-quality findings from the import gate (energy vs the row's own macros):
 - **5 genuine source errors** (stated energy far outside the macro band): N001 chicken leg (384 vs ~192), two crab rows, octopus, prawns-small. None are mapped by any dish ref; the gate prints them on every run so a future ref never lands on one.
 - Spot-checks match the book: rice milled 356, atta 320, potato 70, onion 48, egg whole 135, paneer 258, groundnut 520.
 
+### Third-party cross-check (Kaggle "Indian Food Nutrition", 1014 dishes)
+
+Vendored at `scripts/ifct/data/kaggle-indian-food-nutrition.csv` for reproducibility. Used **only as a directional second opinion — nothing from it enters the seed** (it has no documented provenance and a per-serving basis with undefined, wildly inconsistent serving sizes: chai 16 kcal = tiny unsweetened cup, medu vada 746 = whole batch of four, chapati 202 = a two-roti serving). That inconsistency makes automated validation impossible, but where the serving basis roughly aligns, Slate's IFCT-composed totals agree well: bhindi 107 vs 111, sambar 148 vs 97, rajma 177 vs 144, curd rice 254 vs 196, egg bhurji 227 vs 156. Takeaway: nothing in the Slate dish table is order-of-magnitude wrong. It cannot confirm precise values (undocumented portions), so **IFCT-composed values stay the source of truth** — the lineage rule holds.
+
 ---
 
 ## 1. Exercise METs — decide the edition first
