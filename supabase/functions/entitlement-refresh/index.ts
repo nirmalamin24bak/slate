@@ -42,6 +42,17 @@ Deno.serve(async (req) => {
   if (userError || !userData.user) return json(401, { error: 'unauthorized' });
   const userId = userData.user.id;
 
+  // M2: per-user cooldown before the outbound RC call, so an authenticated
+  // caller can't loop this endpoint into unbounded RevenueCat REST traffic
+  // under Slate's secret key. 30s covers the honest cases (SDK/server
+  // disagreement, post-restore); a tighter loop gets 429 and backs off.
+  const { data: allowed, error: rateError } = await service.rpc('entitlement_refresh_check', {
+    p_user: userId,
+    p_cooldown_seconds: 30,
+  });
+  if (rateError) return json(500, { error: 'rate check failed' });
+  if (allowed === false) return json(429, { error: 'slow down' });
+
   // Ask RevenueCat for this subscriber's authoritative state.
   let sub: RcSubscriber;
   try {
