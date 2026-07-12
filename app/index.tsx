@@ -6,10 +6,10 @@ import { Redirect, useFocusEffect, useLocalSearchParams, useRouter, type Href } 
 import * as Network from 'expo-network';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -167,9 +167,16 @@ export default function Journal() {
     };
   }, [svc, selectedDay, changeTick, load]);
 
-  // Stable across renders so memoized JournalLines don't re-render on every
-  // keystroke (setDetail from useState is itself stable).
+  // Stable across renders so memoized children (JournalLine, SummaryCard,
+  // SuggestionStrip) don't re-render on every keystroke. setState setters are
+  // themselves stable; wrapping the inline closures makes their identity stable
+  // too, which is what the memo() boundaries compare on.
   const openDetail = useCallback((line: DayLine) => setDetail(line), []);
+  const openOptions = useCallback(() => setOptionsOpen(true), []);
+  const pickSuggestion = useCallback((text: string) => {
+    setInput(text);
+    inputRef.current?.focus();
+  }, []);
 
   if (gate === 'loading') return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   // typed routes regenerate on the next `expo start`; until then, cast
@@ -227,131 +234,135 @@ export default function Journal() {
         style={styles.screen}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
+        <FlatList
+          data={view?.lines ?? []}
+          keyExtractor={(line) => line.entry.id}
           keyboardShouldPersistTaps="handled"
           onScrollEndDrag={(e) => {
             // pull down on "Today" → the day scrubber (spec/02 §B)
             if (e.nativeEvent.contentOffset.y < -40) setScrubbing(true);
           }}
           contentContainerStyle={styles.scroll}
-        >
-          <Pressable
-            onPress={() => setScrubbing((s) => !s)}
-            accessibilityRole="button"
-            style={styles.header}
-          >
-            <Text style={[type.title, { color: colors.ink }]}>{title}</Text>
-            {!hideCalories && view && (
-              <Text {...numberProps} style={[type.number, styles.total, { color: colors.inkMute }]}>
-                {Math.round(view.totals.netKcal).toLocaleString('en-IN')} cals
-                {view.totals.pendingCount > 0 ? `  ·  +${view.totals.pendingCount} pending` : ''}
-              </Text>
-            )}
-          </Pressable>
-
-          {scrubbing && (
-            <DayScrubber
-              today={today}
-              selected={selectedDay}
-              onSelect={setSelectedDay}
-              onDone={() => setScrubbing(false)}
-            />
+          // Only visible lines mount — a heavy logging day (or a full history
+          // day) no longer mounts every JournalLine + shimmer at once.
+          initialNumToRender={20}
+          windowSize={11}
+          removeClippedSubviews
+          renderItem={({ item }) => (
+            <JournalLine line={item} hideCalories={hideCalories} onPress={openDetail} />
           )}
-
-          <View style={styles.lines}>
-            {view?.lines.map((line) => (
-              <JournalLine
-                key={line.entry.id}
-                line={line}
-                hideCalories={hideCalories}
-                onPress={openDetail}
-              />
-            ))}
-          </View>
-
-          {weightConfirm && (
-            <View style={[styles.inlinePrompt, { backgroundColor: colors.fill }]}>
-              <Text style={[type.label, { color: colors.ink }]}>
-                {weightConfirm.newKg} kg. That&apos;s{' '}
-                {Math.abs(weightConfirm.newKg - weightConfirm.prevKg).toFixed(1)} kg from your last
-                weigh-in. Save it?
-              </Text>
-              <View style={styles.promptRow}>
-                {(['Save', 'Not now'] as const).map((label) => (
-                  <Pressable
-                    key={label}
-                    accessibilityRole="button"
-                    onPress={() => {
-                      void svc?.store.confirmWeight(weightConfirm.entryId, label === 'Save');
-                      setWeightConfirm(null);
-                    }}
-                    style={[styles.promptBtn, { backgroundColor: colors.surface }]}
+          ListHeaderComponent={
+            <>
+              <Pressable
+                onPress={() => setScrubbing((s) => !s)}
+                accessibilityRole="button"
+                accessibilityLabel="Pick a day"
+                style={styles.header}
+              >
+                <Text style={[type.title, { color: colors.ink }]}>{title}</Text>
+                {!hideCalories && view && (
+                  <Text
+                    {...numberProps}
+                    style={[type.number, styles.total, { color: colors.inkMute }]}
                   >
-                    <Text style={[type.label, { color: colors.ink }]}>{label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {needsWeight && (
-            <View style={[styles.inlinePrompt, { backgroundColor: colors.fill }]}>
-              <Text style={[type.label, { color: colors.ink }]}>
-                We need your weight to work out exercise burn.
-              </Text>
-              <View style={styles.promptRow}>
-                <TextInput
-                  value={weightInput}
-                  onChangeText={setWeightInput}
-                  onSubmitEditing={submitWeight}
-                  keyboardType="numeric"
-                  placeholder="kg"
-                  placeholderTextColor={colors.inkMute}
-                  accessibilityLabel="Your weight in kilograms"
-                  maxFontSizeMultiplier={numberMaxFontScale}
-                  style={[
-                    type.number,
-                    styles.weightInput,
-                    { backgroundColor: colors.surface, color: colors.ink },
-                  ]}
+                    {Math.round(view.totals.netKcal).toLocaleString('en-IN')} cals
+                    {view.totals.pendingCount > 0
+                      ? `  ·  +${view.totals.pendingCount} pending`
+                      : ''}
+                  </Text>
+                )}
+              </Pressable>
+              {scrubbing && (
+                <DayScrubber
+                  today={today}
+                  selected={selectedDay}
+                  onSelect={setSelectedDay}
+                  onDone={() => setScrubbing(false)}
                 />
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={submitWeight}
-                  style={[styles.promptBtn, { backgroundColor: colors.surface }]}
-                >
-                  <Text style={[type.label, { color: colors.ink }]}>Save</Text>
-                </Pressable>
-              </View>
-              {weightError && (
-                <Text style={[type.label, styles.weightError, { color: colors.inkMute }]}>
-                  {weightError}
-                </Text>
               )}
-            </View>
-          )}
+            </>
+          }
+          ListFooterComponent={
+            <>
+              {weightConfirm && (
+                <View style={[styles.inlinePrompt, { backgroundColor: colors.fill }]}>
+                  <Text style={[type.label, { color: colors.ink }]}>
+                    {weightConfirm.newKg} kg. That&apos;s{' '}
+                    {Math.abs(weightConfirm.newKg - weightConfirm.prevKg).toFixed(1)} kg from your
+                    last weigh-in. Save it?
+                  </Text>
+                  <View style={styles.promptRow}>
+                    {(['Save', 'Not now'] as const).map((label) => (
+                      <Pressable
+                        key={label}
+                        accessibilityRole="button"
+                        onPress={() => {
+                          void svc?.store.confirmWeight(weightConfirm.entryId, label === 'Save');
+                          setWeightConfirm(null);
+                        }}
+                        style={[styles.promptBtn, { backgroundColor: colors.surface }]}
+                      >
+                        <Text style={[type.label, { color: colors.ink }]}>{label}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
 
-          <TextInput
-            ref={inputRef}
-            value={input}
-            onChangeText={setInput}
-            onSubmitEditing={submit}
-            blurOnSubmit={false}
-            returnKeyType="done"
-            placeholder="Write a food..."
-            placeholderTextColor={colors.inkMute}
-            accessibilityLabel="Write a food"
-            style={[type.body, styles.input, { color: colors.ink }]}
-          />
-        </ScrollView>
+              {needsWeight && (
+                <View style={[styles.inlinePrompt, { backgroundColor: colors.fill }]}>
+                  <Text style={[type.label, { color: colors.ink }]}>
+                    We need your weight to work out exercise burn.
+                  </Text>
+                  <View style={styles.promptRow}>
+                    <TextInput
+                      value={weightInput}
+                      onChangeText={setWeightInput}
+                      onSubmitEditing={submitWeight}
+                      keyboardType="numeric"
+                      placeholder="kg"
+                      placeholderTextColor={colors.inkMute}
+                      accessibilityLabel="Your weight in kilograms"
+                      maxFontSizeMultiplier={numberMaxFontScale}
+                      style={[
+                        type.number,
+                        styles.weightInput,
+                        { backgroundColor: colors.surface, color: colors.ink },
+                      ]}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={submitWeight}
+                      style={[styles.promptBtn, { backgroundColor: colors.surface }]}
+                    >
+                      <Text style={[type.label, { color: colors.ink }]}>Save</Text>
+                    </Pressable>
+                  </View>
+                  {weightError && (
+                    <Text style={[type.label, styles.weightError, { color: colors.inkMute }]}>
+                      {weightError}
+                    </Text>
+                  )}
+                </View>
+              )}
 
-        <SuggestionStrip
-          suggestions={suggestions}
-          onPick={(text) => {
-            setInput(text);
-            inputRef.current?.focus();
-          }}
+              <TextInput
+                ref={inputRef}
+                value={input}
+                onChangeText={setInput}
+                onSubmitEditing={submit}
+                blurOnSubmit={false}
+                returnKeyType="done"
+                placeholder="Write a food..."
+                placeholderTextColor={colors.inkMute}
+                accessibilityLabel="Write a food"
+                style={[type.body, styles.input, { color: colors.ink }]}
+              />
+            </>
+          }
         />
+
+        <SuggestionStrip suggestions={suggestions} onPick={pickSuggestion} />
 
         {view && (
           <View style={styles.cardWrap}>
@@ -360,7 +371,7 @@ export default function Journal() {
               calorieGoal={profile?.calorie_goal ?? null}
               hideCalories={hideCalories}
               showMacros={showMacros}
-              onPress={() => setOptionsOpen(true)}
+              onPress={openOptions}
             />
           </View>
         )}
@@ -420,9 +431,6 @@ const styles = StyleSheet.create({
   },
   total: {
     marginTop: spacing.xs,
-  },
-  lines: {
-    paddingTop: spacing.sm,
   },
   input: {
     paddingHorizontal: screenPadding,
