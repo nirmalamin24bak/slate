@@ -29,8 +29,18 @@ export interface RemoteDb {
   upsert(table: string, rows: readonly Record<string, SqlValue>[]): Promise<void>;
   /** full select of a reference table */
   fetchAll(table: string, columns: string): Promise<Record<string, SqlValue>[]>;
-  /** select one user's rows from a user-owned table, paged internally */
-  fetchOwned(table: string, userId: string): Promise<Record<string, SqlValue>[]>;
+  /**
+   * Select one user's rows from a user-owned table, paged internally. When
+   * `since` is given, returns only rows with updated_at > since (delta sync):
+   * the first sync of a device passes null and pulls everything; later ticks
+   * pass the watermark and pull only what changed. Ordered by updated_at so the
+   * caller can advance the watermark to the last row seen.
+   */
+  fetchOwned(
+    table: string,
+    userId: string,
+    since?: string | null,
+  ): Promise<Record<string, SqlValue>[]>;
 }
 
 /** Local-only columns that must never reach Postgres. */
@@ -120,6 +130,70 @@ export async function pushDirty(
   }
 }
 
+// --- delta-sync watermark (local bookkeeping in the `meta` k/v table) ---
+// Per-table high-water mark of the server updated_at this device has pulled.
+// Namespaced by user so switching identity (anon → adopted) never reuses a
+// stale watermark. Absent watermark → null → the table gets a full pull, which
+// is exactly what a fresh install or a reinstall needs.
+
+function watermarkKey(table: string, userId: string): string {
+  return `sync_watermark:${userId}:${table}`;
+}
+
+async function getWatermark(
+  adapter: SqlAdapter,
+  table: string,
+  userId: string,
+): Promise<string | null> {
+  const row = await adapter.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', [
+    watermarkKey(table, userId),
+  ]);
+  return row?.value ?? null;
+}
+
+async function setWatermark(
+  adapter: SqlAdapter,
+  table: string,
+  userId: string,
+  value: string,
+): Promise<void> {
+  await adapter.run(
+    `INSERT INTO meta (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    [watermarkKey(table, userId), value],
+  );
+}
+
+/** The newest updated_at across a pulled page, or null if the page is empty. */
+function maxUpdatedAt(rows: readonly Record<string, SqlValue>[]): string | null {
+  let max: string | null = null;
+  for (const r of rows) {
+    const u = r['updated_at'];
+    if (typeof u === 'string' && (max === null || u > max)) max = u;
+  }
+  return max;
+}
+
+/**
+ * Pull one table's delta, merge it, and advance the watermark. Kept generic so
+ * every table follows the identical read → merge (in a transaction) → advance
+ * sequence. The watermark advances only after a successful merge, and only when
+ * the page was non-empty, so a failed/skipped merge never loses ground.
+ */
+async function pullTable(
+  adapter: SqlAdapter,
+  remote: RemoteDb,
+  table: string,
+  userId: string,
+  merge: (rows: Record<string, SqlValue>[]) => Promise<void>,
+): Promise<void> {
+  const since = await getWatermark(adapter, table, userId);
+  const rows = await remote.fetchOwned(table, userId, since);
+  await adapter.transaction(() => merge(rows));
+  const max = maxUpdatedAt(rows);
+  if (max !== null) await setWatermark(adapter, table, userId, max);
+}
+
 /**
  * Down-sync one user's rows from Supabase into SQLite (spec/04: Supabase is
  * truth). Without this, SQLite is a write-only sink — a reinstall or a second
@@ -127,23 +201,22 @@ export async function pushDirty(
  * (LWW + dirty-skip + tombstone) live in the repo pullMerge* helpers; each
  * table's merge runs in its own transaction so a mid-pull failure never leaves
  * a half-written table. Best-effort: failures are non-fatal (caller catches).
+ *
+ * Delta sync: each table pulls only rows newer than this device's watermark
+ * (full pull on first sync / reinstall). Soft-deletes bump updated_at, so
+ * tombstones ride the delta and still reach the device.
  */
 export async function pullUserData(
   adapter: SqlAdapter,
   remote: RemoteDb,
   userId: string,
 ): Promise<void> {
-  const entries = await remote.fetchOwned('entries', userId);
-  await adapter.transaction(() => pullMergeEntries(adapter, entries));
-
-  const weights = await remote.fetchOwned('weights', userId);
-  await adapter.transaction(() => pullMergeWeights(adapter, weights));
-
-  const profiles = await remote.fetchOwned('profiles', userId);
-  await adapter.transaction(() => pullMergeProfile(adapter, profiles[0]));
-
-  const kitchen = await remote.fetchOwned('kitchen', userId);
-  await adapter.transaction(() => pullMergeKitchen(adapter, kitchen[0]));
+  await pullTable(adapter, remote, 'entries', userId, (rows) => pullMergeEntries(adapter, rows));
+  await pullTable(adapter, remote, 'weights', userId, (rows) => pullMergeWeights(adapter, rows));
+  await pullTable(adapter, remote, 'profiles', userId, (rows) =>
+    pullMergeProfile(adapter, rows[0]),
+  );
+  await pullTable(adapter, remote, 'kitchen', userId, (rows) => pullMergeKitchen(adapter, rows[0]));
 }
 
 /** Refresh the reference mirrors. Called on app start when online; failures are non-fatal. */

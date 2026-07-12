@@ -53,14 +53,19 @@ const supabaseRemote: RemoteDb = {
     if (error) throw new Error(`sync pull ${table}: ${error.message}`);
     return (data ?? []) as unknown as Record<string, SqlValue>[];
   },
-  async fetchOwned(table, userId) {
+  async fetchOwned(table, userId, since) {
     const all: Record<string, SqlValue>[] = [];
     for (let from = 0; ; from += PAGE_SIZE) {
-      const { data, error } = await supabase
+      // Delta pull: order by updated_at and only take rows newer than the
+      // device's watermark. Soft-deletes bump updated_at, so tombstones ride
+      // the same delta — no separate deletion channel needed.
+      let query = supabase
         .from(table)
         .select('*')
         .eq('user_id', userId)
-        .range(from, from + PAGE_SIZE - 1);
+        .order('updated_at', { ascending: true });
+      if (since != null) query = query.gt('updated_at', since);
+      const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
       if (error) throw new Error(`sync pull ${table}: ${error.message}`);
       const page = (data ?? []) as unknown as Record<string, SqlValue>[];
       all.push(...page);

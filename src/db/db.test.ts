@@ -560,10 +560,13 @@ describe('referenceRepo', () => {
 describe('sync', () => {
   function fakeRemote(owned: Record<string, Record<string, SqlValue>[]> = {}): RemoteDb & {
     upserts: Record<string, Record<string, unknown>[]>;
+    fetchCalls: { table: string; since: string | null }[];
   } {
     const upserts: Record<string, Record<string, unknown>[]> = {};
+    const fetchCalls: { table: string; since: string | null }[] = [];
     return {
       upserts,
+      fetchCalls,
       async upsert(table, rows) {
         upserts[table] = [...(upserts[table] ?? []), ...rows];
       },
@@ -571,8 +574,14 @@ describe('sync', () => {
         const fixture = REFERENCE_FIXTURE as unknown as Record<string, Record<string, SqlValue>[]>;
         return fixture[table] ?? [];
       },
-      async fetchOwned(table) {
-        return owned[table] ?? [];
+      // Honor the delta contract: record the watermark passed, and when given a
+      // `since`, return only rows strictly newer than it (as the server would).
+      async fetchOwned(table, _userId, since) {
+        fetchCalls.push({ table, since: since ?? null });
+        const rows = owned[table] ?? [];
+        return since == null
+          ? rows
+          : rows.filter((r) => typeof r['updated_at'] === 'string' && r['updated_at'] > since);
       },
     };
   }
@@ -741,6 +750,56 @@ describe('sync', () => {
       USER,
     );
     expect(await listDay(db, USER, '2026-07-10')).toHaveLength(0);
+    db.close();
+  });
+
+  it('delta sync: first pull is full, later pulls pass the watermark and take only newer rows', async () => {
+    const db = await openTestDb();
+
+    // First sync of a fresh device: no watermark → since is null → full pull.
+    const r1 = fakeRemote({
+      entries: [serverEntry({ id: 's1', raw_text: 'one', updated_at: T0 })],
+    });
+    await pullUserData(db, r1, USER);
+    expect(r1.fetchCalls.find((c) => c.table === 'entries')?.since).toBeNull();
+    expect((await getEntry(db, 's1'))?.raw_text).toBe('one');
+
+    // Second sync: the watermark (max updated_at seen = T0) is passed as `since`,
+    // and the mock returns only rows strictly newer — s1 (at T0) is not re-sent,
+    // s2 (at T1) is.
+    const r2 = fakeRemote({
+      entries: [
+        serverEntry({ id: 's1', raw_text: 'one', updated_at: T0 }),
+        serverEntry({ id: 's2', raw_text: 'two', updated_at: T1 }),
+      ],
+    });
+    await pullUserData(db, r2, USER);
+    expect(r2.fetchCalls.find((c) => c.table === 'entries')?.since).toBe(T0);
+    expect((await getEntry(db, 's2'))?.raw_text).toBe('two');
+
+    // Third sync with nothing new: watermark is now T1, delta returns empty.
+    const r3 = fakeRemote({
+      entries: [
+        serverEntry({ id: 's1', updated_at: T0 }),
+        serverEntry({ id: 's2', updated_at: T1 }),
+      ],
+    });
+    await pullUserData(db, r3, USER);
+    expect(r3.fetchCalls.find((c) => c.table === 'entries')?.since).toBe(T1);
+    db.close();
+  });
+
+  it('delta watermark is per-user: an adopted identity starts with a full pull', async () => {
+    const db = await openTestDb();
+    await pullUserData(
+      db,
+      fakeRemote({ entries: [serverEntry({ id: 's1', updated_at: T0 })] }),
+      USER,
+    );
+    // A different user id has no watermark yet → full pull (since null).
+    const other = fakeRemote({ entries: [serverEntry({ id: 's9', updated_at: T0 })] });
+    await pullUserData(db, other, 'user-b');
+    expect(other.fetchCalls.find((c) => c.table === 'entries')?.since).toBeNull();
     db.close();
   });
 
