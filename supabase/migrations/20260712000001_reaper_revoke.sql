@@ -1,0 +1,25 @@
+-- Security C1 — lock down reap_resolver_state().
+--
+-- reap_resolver_state() is SECURITY DEFINER (migrations 0008, 0011) so the cron
+-- scheduler can DELETE across resolution_cache, resolution_cache_pending,
+-- resolver_rate_limits, and resolver_global_budget regardless of RLS. Every
+-- other definer function in this schema ends with an explicit revoke
+-- (resolver_cache_write, migration 0011:130; resolver_rate_check, 0004) — this
+-- one was missed. The default EXECUTE grant on a public.* function is PUBLIC,
+-- so any anon-signed-in caller could rpc('reap_resolver_state') and force-evict
+-- the global resolution corpus / pending-quorum observations on demand,
+-- bypassing RLS entirely. Revoke it. Cron runs as the scheduler role (member of
+-- postgres), which is unaffected by a PUBLIC/anon/authenticated revoke.
+revoke all on function public.reap_resolver_state() from public, anon, authenticated;
+
+-- Liveness note (not enforceable from a migration): reap_resolver_state only
+-- runs if pg_cron is actually enabled AND the 'reap-resolver-state' job is
+-- registered. Migration 0008 issues `create extension if not exists pg_cron`
+-- and `cron.schedule(...)`, but if the migration role lacked the rights to
+-- enable the extension the statement no-ops silently and the reaper never runs
+-- — resolver_rate_limits / resolution_cache_pending then grow unbounded.
+-- Verify once against prod (read-only, run manually — see phase-7 punch list):
+--   select extname from pg_extension where extname = 'pg_cron';
+--   select jobname, schedule, active from cron.job where jobname = 'reap-resolver-state';
+-- Both must return a row. If either is empty, enable pg_cron via the Supabase
+-- Dashboard (Database → Extensions) and re-run migration 0008's cron.schedule.
