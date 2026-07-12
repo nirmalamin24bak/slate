@@ -131,6 +131,23 @@ export async function listRetryable(adapter: SqlAdapter, userId: string): Promis
   );
 }
 
+/**
+ * Rows left mid-resolve by a crash (audit B6): addLine inserts at
+ * status='resolving' before the resolver replies, so a force-quit between the
+ * two leaves a row that would shimmer forever — the in-flight resolve that
+ * would have completed it died with the process. On cold start these are
+ * definitionally stuck and must be re-queued. (A row still legitimately
+ * resolving in a live session never reaches restore(), which only runs at boot.)
+ */
+export async function listResolving(adapter: SqlAdapter, userId: string): Promise<EntryRow[]> {
+  return adapter.all<EntryRow>(
+    `SELECT * FROM entries
+     WHERE user_id = ? AND status = 'resolving' AND deleted_at IS NULL
+     ORDER BY created_at ASC, position ASC`,
+    [userId],
+  );
+}
+
 /** Saved foods: nickname set → saved (spec/02 §B). Latest nickname wins per name. */
 export async function listSavedFoods(adapter: SqlAdapter, userId: string): Promise<EntryRow[]> {
   return adapter.all<EntryRow>(

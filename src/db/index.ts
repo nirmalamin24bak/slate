@@ -11,6 +11,7 @@ export {
   listDay,
   listDirtyEntries,
   listRecents,
+  listResolving,
   listRetryable,
   listSavedFoods,
   markEntriesSynced,

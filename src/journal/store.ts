@@ -17,6 +17,7 @@ import {
   getEntry,
   insertEntry,
   listDay,
+  listResolving,
   listRetryable,
   nextPosition,
   patchEntry,
@@ -81,9 +82,24 @@ export class JournalStore {
 
   /** Rebuild the retry queue after a cold start (force-quit survives in SQLite). */
   async restore(): Promise<void> {
-    const rows = await listRetryable(this.deps.adapter, this.deps.userId);
+    const { adapter, userId } = this.deps;
     const now = this.deps.now().getTime();
-    for (const row of rows) this.queue.push(row.id, now);
+    // Unresolved-but-retryable rows: the normal backoff queue survives a restart.
+    for (const row of await listRetryable(adapter, userId)) this.queue.push(row.id, now);
+    // B6: rows stuck at 'resolving' were mid-flight when the process died — the
+    // in-flight resolve is gone, so they'd shimmer forever. Demote each to the
+    // same shape a failed offline attempt leaves (unresolved + retryable) so
+    // drainDue's guard admits it, then queue it. This reuses the whole
+    // drain/backoff/cap path rather than adding a second resolving-drain branch.
+    for (const row of await listResolving(adapter, userId)) {
+      await patchEntry(
+        adapter,
+        row.id,
+        { status: 'unresolved', intent: 'unresolved', retryable: 1 },
+        this.deps.now().toISOString(),
+      );
+      this.queue.push(row.id, now);
+    }
   }
 
   async day(logDate: string): Promise<DayView> {
@@ -427,23 +443,28 @@ export class JournalStore {
 
   private async writeBodyWeight(weightKg: number, logDate: string): Promise<void> {
     const nowIso = this.deps.now().toISOString();
-    await upsertWeight(this.deps.adapter, {
-      id: this.deps.newId(),
-      user_id: this.deps.userId,
-      log_date: logDate,
-      weight_kg: weightKg,
-      source: 'journal',
-      created_at: nowIso,
-      updated_at: nowIso,
-      deleted_at: null,
-      dirty: 1,
+    // The weight row and the profile's weight_kg are one source of truth for
+    // exercise math — write both atomically so a crash between them can't leave
+    // a logged weight with a stale (or assumed) profile, or vice versa.
+    await this.deps.adapter.transaction(async () => {
+      await upsertWeight(this.deps.adapter, {
+        id: this.deps.newId(),
+        user_id: this.deps.userId,
+        log_date: logDate,
+        weight_kg: weightKg,
+        source: 'journal',
+        created_at: nowIso,
+        updated_at: nowIso,
+        deleted_at: null,
+        dirty: 1,
+      });
+      await patchProfile(
+        this.deps.adapter,
+        this.deps.userId,
+        { weight_kg: weightKg, weight_is_assumed: 0 },
+        nowIso,
+      );
     });
-    await patchProfile(
-      this.deps.adapter,
-      this.deps.userId,
-      { weight_kg: weightKg, weight_is_assumed: 0 },
-      nowIso,
-    );
   }
 
   /** Re-derive every number on the day and persist only what changed. */
@@ -490,12 +511,21 @@ export class JournalStore {
     );
 
     const nowIso = this.deps.now().toISOString();
-    for (const [id, patch] of patches) {
-      await patchEntry(adapter, id, patch, nowIso);
-      // A food ref that fell out of the catalogue re-queues honestly.
-      if (patch.status === 'unresolved' && patch.retryable === 1) {
-        this.queue.push(id, this.deps.now().getTime());
+    // Apply all patches atomically: oil-share distribution is a day-level
+    // computation, so a crash mid-loop must not leave some rows on the new
+    // values and some stale (inconsistent totals until the next full
+    // recompute). Reads above stay outside the write lock to keep it short.
+    // Queue side-effects run after commit — never touch the queue inside the tx.
+    const toQueue: string[] = [];
+    await adapter.transaction(async () => {
+      for (const [id, patch] of patches) {
+        await patchEntry(adapter, id, patch, nowIso);
+        // A food ref that fell out of the catalogue re-queues honestly.
+        if (patch.status === 'unresolved' && patch.retryable === 1) {
+          toQueue.push(id);
+        }
       }
-    }
+    });
+    for (const id of toQueue) this.queue.push(id, this.deps.now().getTime());
   }
 }

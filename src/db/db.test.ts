@@ -11,6 +11,7 @@ import {
   listDirtyEntries,
   listLoggedDates,
   listRecents,
+  listResolving,
   listRetryable,
   listSavedFoods,
   markEntriesSynced,
@@ -142,6 +143,24 @@ describe('entriesRepo', () => {
 
     const queue = await listRetryable(db, USER);
     expect(queue.map((e) => e.id)).toEqual(['old', 'new']);
+    db.close();
+  });
+
+  it('lists resolving lines (crash-stuck) oldest first, ignoring resolved/deleted', async () => {
+    const db = await openTestDb();
+    await insertEntry(
+      db,
+      entry({ id: 'stuck-old', status: 'resolving', created_at: T0, position: 0 }),
+    );
+    await insertEntry(
+      db,
+      entry({ id: 'stuck-new', status: 'resolving', created_at: T1, position: 1 }),
+    );
+    await insertEntry(db, entry({ id: 'done', status: 'resolved', position: 2 }));
+    await insertEntry(db, entry({ id: 'gone', status: 'resolving', deleted_at: T1, position: 3 }));
+
+    const stuck = await listResolving(db, USER);
+    expect(stuck.map((e) => e.id)).toEqual(['stuck-old', 'stuck-new']);
     db.close();
   });
 

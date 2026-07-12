@@ -254,6 +254,62 @@ describe('drainDue skip conditions', () => {
     await h.store.drainDue(); // must not throw or resurrect the row
     expect((await getEntry(h.db, id))?.deleted_at).not.toBeNull();
   });
+
+  it('restore re-queues a row stuck at resolving (crash mid-resolve) so it finishes', async () => {
+    // Simulate a force-quit between addLine's insert (status='resolving') and
+    // the resolver reply: a bare resolving row with nothing in the queue.
+    const nowIso = '2026-07-10T09:00:00.000Z';
+    await insertEntry(h.db, {
+      id: 'stuck',
+      user_id: USER,
+      log_date: DAY,
+      position: 0,
+      raw_text: '2 roti',
+      nickname: null,
+      intent: 'unresolved',
+      status: 'resolving',
+      resolved_ref: null,
+      qty: null,
+      unit: null,
+      context: null,
+      kcal: null,
+      protein_g: null,
+      carbs_g: null,
+      fat_g: null,
+      fiber_g: null,
+      sugar_g: null,
+      water_ml: null,
+      step_count: null,
+      sleep_minutes: null,
+      is_included: 0,
+      calc_version: 'pending',
+      was_calibrated: 0,
+      created_at: nowIso,
+      updated_at: nowIso,
+      deleted_at: null,
+      retryable: 0,
+      dirty: 1,
+    });
+    h.transport.replies.set(
+      '2 roti',
+      JSON.stringify([
+        {
+          intent: 'food',
+          ref: 'dish_roti',
+          qty: 2,
+          unit: 'roti',
+          context: 'home',
+          confidence: 0.95,
+        },
+      ]),
+    );
+
+    await h.store.restore(); // rebuild the queue from disk — must pick up 'stuck'
+    h.clock.t += 10_000;
+    await h.store.drainDue();
+
+    expect((await getEntry(h.db, 'stuck'))?.status).toBe('resolved');
+  });
 });
 
 describe('editLine and empty-input guards', () => {
