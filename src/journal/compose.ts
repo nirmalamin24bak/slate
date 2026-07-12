@@ -14,6 +14,8 @@
 
 import {
   CALC_VERSION,
+  chaiNutrition,
+  coffeeNutrition,
   computeEntry,
   dayMovementBurn,
   displayNet,
@@ -27,14 +29,27 @@ import {
   type ExerciseBurn,
   type FoodUnit,
   type Kitchen,
+  type Nutrition,
 } from '../engine';
 import type { EntryPatch } from '../db/entriesRepo';
 import type { EntryRow, ExerciseRow, PackagedFoodRow } from '../db/rows';
 
-// FLAG(nirmal): spec/05 allows `km` for exercise but spec/06's MET formula
-// takes minutes and no spec names a km→minutes conversion. 8 min/km (easy
-// jog) used as the engineering default pending a decision.
-export const DEFAULT_MIN_PER_KM = 8;
+// Beverages whose nutrition comes from the user's chai/coffee calibration
+// (the moat questions), not a fixed recipe: the same "1 chai" is ~5 kcal black
+// or ~90 kcal two-sugars-full-milk. Keyed by dish ref → the engine function
+// that reads the kitchen. qty multiplies (two chais = twice the calibration).
+const BEVERAGE_NUTRITION: Record<string, (k: Kitchen) => Nutrition> = {
+  dish_chai: chaiNutrition,
+  dish_coffee: coffeeNutrition,
+};
+
+// spec/05 allows `km` for exercise but the MET formula takes minutes. A single
+// km→minutes factor is wrong across modes (8 min/km credited jog-pace burn to a
+// 10 km cycle), so pace is per-mode, keyed off the fields already in the
+// lookup. Ruled by Nirmal 12 Jul 2026: walk 12, run/jog 6, cycle 3 min/km.
+export const MIN_PER_KM_WALK = 12; // ambulatory, MET < 5 (walking)
+export const MIN_PER_KM_RUN = 6; // ambulatory, MET >= 5 (jog/run/hike)
+export const MIN_PER_KM_CYCLE = 3; // non-ambulatory distance sport (cycling)
 
 export type LineDisplay =
   | { kind: 'kcal'; value: number } // food — positive, ink
@@ -169,8 +184,13 @@ export interface DayContext {
   personalization: string | null;
 }
 
-function exerciseMinutes(qty: number, unit: string): number {
-  return unit === 'km' ? qty * DEFAULT_MIN_PER_KM : qty;
+function minPerKm(met: number, isAmbulatory: boolean): number {
+  if (!isAmbulatory) return MIN_PER_KM_CYCLE; // cycling is the distance sport here
+  return met >= 5 ? MIN_PER_KM_RUN : MIN_PER_KM_WALK;
+}
+
+function exerciseMinutes(qty: number, unit: string, met: number, isAmbulatory: boolean): number {
+  return unit === 'km' ? qty * minPerKm(met, isAmbulatory) : qty;
 }
 
 function packagedNutrition(row: PackagedFoodRow, qty: number, unit: string): EntryPatch | null {
@@ -221,6 +241,27 @@ export function recomputeDay(
 
   for (const row of foods) {
     const ref = row.resolved_ref ?? '';
+
+    // Beverage calibration path (chai/coffee): nutrition from the kitchen, not
+    // the recipe. qty is a cup count (default 1); the calibrated per-cup values
+    // scale by it. This is why the onboarding chai/coffee questions exist.
+    const beverage = BEVERAGE_NUTRITION[ref];
+    if (beverage) {
+      const cups = row.qty ?? 1;
+      const n = beverage(ctx.kitchen);
+      patches.set(row.id, {
+        kcal: n.kcal * cups,
+        protein_g: n.proteinG * cups,
+        carbs_g: n.carbsG * cups,
+        fat_g: n.fatG * cups,
+        fiber_g: n.fiberG * cups,
+        sugar_g: n.sugarG * cups,
+        was_calibrated: ctx.kitchenIsAssumed ? 0 : 1,
+        calc_version: CALC_VERSION,
+      });
+      continue;
+    }
+
     const dish = lookups.dishes.get(ref);
     if (dish && row.qty !== null && row.unit !== null) {
       const n = computeEntry({
@@ -272,7 +313,12 @@ export function recomputeDay(
       patches.set(row.id, { status: 'unresolved', retryable: 1 });
       continue;
     }
-    const minutes = exerciseMinutes(row.qty, row.unit ?? 'minutes');
+    const minutes = exerciseMinutes(
+      row.qty,
+      row.unit ?? 'minutes',
+      exercise.met,
+      exercise.is_ambulatory === 1,
+    );
     const kcal = metBurn(exercise.met, weightKg, minutes);
     burns.push({ id: row.id, kcal, isAmbulatory: exercise.is_ambulatory === 1 });
   }

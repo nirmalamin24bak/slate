@@ -14,7 +14,14 @@ export {
   weightForCalc,
 } from './energy';
 export type { BmrInput, ExerciseBurn, MovementBurn, WeightSource } from './energy';
-export { chaiKcal, coffeeKcal, dailyOilMlPerPerson, oilShares } from './kitchen';
+export {
+  chaiKcal,
+  chaiNutrition,
+  coffeeKcal,
+  coffeeNutrition,
+  dailyOilMlPerPerson,
+  oilShares,
+} from './kitchen';
 export { addOil, scale, sumIngredients, zeroNutrition } from './nutrition';
 export { applyPersonalization, clampFatFactor, clampTotalFactor } from './personalization';
 export { parsePersonalization } from './parsePersonalization';

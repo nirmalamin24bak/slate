@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 import type { Dish, Kitchen } from '../engine/types';
 import { metBurn, stepsBurn } from '../engine';
 import type { EntryRow } from '../db/rows';
-import { composeDay, DEFAULT_MIN_PER_KM, recomputeDay } from './compose';
+import {
+  composeDay,
+  MIN_PER_KM_CYCLE,
+  MIN_PER_KM_RUN,
+  MIN_PER_KM_WALK,
+  recomputeDay,
+} from './compose';
 import { addDays, dayKey, daysBetween, isWithinFreeWindow } from './dates';
 
 const KITCHEN: Kitchen = {
@@ -192,6 +198,8 @@ describe('recomputeDay — write-time math', () => {
       ['ex_walk', { met: 3.5, unit: 'minutes' as const, is_ambulatory: 1 }],
       ['ex_weights', { met: 6, unit: 'minutes' as const, is_ambulatory: 0 }],
       ['ex_run_km', { met: 9, unit: 'km' as const, is_ambulatory: 1 }],
+      ['ex_walk_km', { met: 3.8, unit: 'km' as const, is_ambulatory: 1 }],
+      ['ex_cycle_km', { met: 7, unit: 'km' as const, is_ambulatory: 0 }],
     ]),
     packagedFoods: new Map([
       [
@@ -254,10 +262,42 @@ describe('recomputeDay — write-time math', () => {
     expect(patches.get(weights.id)?.kcal).toBeCloseTo(-metBurn(6, 85, 30), 6);
   });
 
-  it('km exercise converts via the flagged default pace', () => {
+  it('km exercise converts at a per-mode pace: run 6, walk 12, cycle 3 min/km', () => {
     const run = row({ intent: 'exercise', resolved_ref: 'ex_run_km', qty: 5, unit: 'km' });
-    const patches = recomputeDay([run], lookups, ctx);
-    expect(patches.get(run.id)?.kcal).toBeCloseTo(-metBurn(9, 85, 5 * DEFAULT_MIN_PER_KM), 6);
+    const walk = row({ intent: 'exercise', resolved_ref: 'ex_walk_km', qty: 5, unit: 'km' });
+    const cycle = row({ intent: 'exercise', resolved_ref: 'ex_cycle_km', qty: 10, unit: 'km' });
+    const patches = recomputeDay([run, walk, cycle], lookups, ctx);
+    // ambulatory MET>=5 → run pace; MET<5 → walk pace; non-ambulatory → cycle pace
+    expect(patches.get(run.id)?.kcal).toBeCloseTo(-metBurn(9, 85, 5 * MIN_PER_KM_RUN), 6);
+    expect(patches.get(walk.id)?.kcal).toBeCloseTo(-metBurn(3.8, 85, 5 * MIN_PER_KM_WALK), 6);
+    expect(patches.get(cycle.id)?.kcal).toBeCloseTo(-metBurn(7, 85, 10 * MIN_PER_KM_CYCLE), 6);
+  });
+
+  it('chai nutrition comes from the kitchen calibration, scaled by cup count', () => {
+    // KITCHEN: 1 tsp sugar, toned milk → chaiKcal = 5 + 35 + 16 = 56 per cup.
+    const oneChai = row({ intent: 'food', resolved_ref: 'dish_chai', qty: 1, unit: 'katori' });
+    const twoChai = row({ intent: 'food', resolved_ref: 'dish_chai', qty: 2, unit: 'katori' });
+    const patches = recomputeDay([oneChai, twoChai], lookups, ctx);
+    expect(patches.get(oneChai.id)?.kcal).toBeCloseTo(56, 6);
+    expect(patches.get(oneChai.id)?.sugar_g).toBeCloseTo(4, 6); // 1 tsp ≈ 4 g
+    expect(patches.get(twoChai.id)?.kcal).toBeCloseTo(112, 6);
+    expect(patches.get(oneChai.id)?.was_calibrated).toBe(1);
+  });
+
+  it('black no-sugar chai differs from sweet milky chai — calibration is live', () => {
+    const chai = row({ intent: 'food', resolved_ref: 'dish_chai', qty: 1, unit: 'katori' });
+    const black = { ...ctx, kitchen: { ...KITCHEN, chaiSugarTsp: 0, chaiMilk: 'none' as const } };
+    const sweet = { ...ctx, kitchen: { ...KITCHEN, chaiSugarTsp: 2, chaiMilk: 'full' as const } };
+    const blackKcal = recomputeDay([chai], lookups, black).get(chai.id)?.kcal ?? 0;
+    const sweetKcal = recomputeDay([chai], lookups, sweet).get(chai.id)?.kcal ?? 0;
+    expect(blackKcal).toBeCloseTo(5, 6); // tea base only
+    expect(sweetKcal).toBeGreaterThan(blackKcal + 40); // milk + 2 sugars
+  });
+
+  it('assumed kitchen leaves chai uncalibrated', () => {
+    const chai = row({ intent: 'food', resolved_ref: 'dish_chai', qty: 1, unit: 'katori' });
+    const patches = recomputeDay([chai], lookups, { ...ctx, kitchenIsAssumed: true });
+    expect(patches.get(chai.id)?.was_calibrated).toBe(0);
   });
 
   it('assumed weight falls back to 65kg so burns never crash', () => {

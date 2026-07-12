@@ -80,8 +80,8 @@ describe('toGrams', () => {
     expect(toGrams(3, 'tsp', makeDish(), kitchen)).toBe(15);
   });
 
-  test('cup uses the flagged 240ml default', () => {
-    expect(toGrams(1, 'cup', makeDish(), kitchen)).toBe(240);
+  test('cup uses the 150ml Indian beverage-cup default', () => {
+    expect(toGrams(1, 'cup', makeDish(), kitchen)).toBe(150);
   });
 
   test('piece/plate scale the recipe to the default portion', () => {
