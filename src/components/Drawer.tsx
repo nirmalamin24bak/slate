@@ -7,6 +7,7 @@ import { Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { usePlus } from '@/lib/plus';
+import { useSyncHealth } from '@/lib/syncHealth';
 import { screenPadding, spacing, type, useTheme } from '@/theme';
 
 import { PlusBadge } from './PlusBadge';
@@ -26,10 +27,10 @@ interface DrawerRow {
   route?: string;
 }
 
-const TOP_ROWS: readonly DrawerRow[] = [
-  { label: 'Journal' },
-  { label: 'Chat', plus: true, route: '/chat' },
-];
+// Chat is a stub ("coming soon") and Plus-gated, so a Plus reviewer tapping it
+// hits a non-working paid feature (App Store 2.1). Kept out of the drawer until
+// it ships — restore this row and the paywall bullet together. (Audit C1.)
+const TOP_ROWS: readonly DrawerRow[] = [{ label: 'Journal' }];
 
 const MAIN_ROWS: readonly DrawerRow[] = [
   { label: 'History', route: '/history' },
@@ -42,6 +43,10 @@ export function Drawer({ visible, onClose }: DrawerProps) {
   const { colors } = useTheme();
   const router = useRouter();
   const plus = usePlus();
+  // Audit B4: a quiet, factual "not backed up" line — only when sync has failed
+  // several ticks in a row. Lives in the drawer, which only mounts when opened,
+  // so subscribing here never touches the keystroke-critical journal render.
+  const { backedUp } = useSyncHealth();
 
   const open = (row: DrawerRow) => {
     onClose();
@@ -87,16 +92,29 @@ export function Drawer({ visible, onClose }: DrawerProps) {
               </Pressable>
             ))}
           </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              onClose();
-              void Share.share({ message: SHARE_MESSAGE });
-            }}
-            style={styles.share}
-          >
-            <Text style={[type.label, { color: colors.inkMute }]}>Share Slate with friends</Text>
-          </Pressable>
+          <View>
+            {!backedUp && (
+              <View
+                accessibilityRole="text"
+                accessibilityLabel="Not backed up yet. Slate will keep trying."
+                style={styles.syncHint}
+              >
+                <Text style={[type.label, { color: colors.inkMute }]}>
+                  Not backed up yet. We keep trying.
+                </Text>
+              </View>
+            )}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                onClose();
+                void Share.share({ message: SHARE_MESSAGE });
+              }}
+              style={styles.share}
+            >
+              <Text style={[type.label, { color: colors.inkMute }]}>Share Slate with friends</Text>
+            </Pressable>
+          </View>
         </SafeAreaView>
       </View>
     </Modal>
@@ -133,5 +151,9 @@ const styles = StyleSheet.create({
   share: {
     paddingHorizontal: screenPadding,
     paddingBottom: spacing.lg,
+  },
+  syncHint: {
+    paddingHorizontal: screenPadding,
+    paddingBottom: spacing.sm,
   },
 });

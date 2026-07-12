@@ -16,6 +16,7 @@ import { refreshServerEntitlement } from './entitlementSync';
 import { newId } from './ids';
 import { getRemoteConfig, refreshRemoteConfig } from './remoteConfig';
 import { reportError } from './report';
+import { recordSyncFailure, recordSyncSuccess } from './syncHealth';
 import { configurePurchases } from './revenuecat';
 import { supabase, ensureAnonymousSession } from './supabase';
 
@@ -141,6 +142,12 @@ async function build(): Promise<Services> {
   // anonymous sign-in hasn't landed yet, becomes the real uid on adoption.
   let currentUserId = userId;
 
+  // Re-entrancy guard (audit B3): the interval, the net-state listener, and the
+  // settings screens all call syncTick; overlapping ticks race the
+  // dirty→push→mark cycle. A tick in flight makes concurrent callers no-op —
+  // the next tick catches whatever remained dirty, so nothing is dropped.
+  let isSyncing = false;
+
   const store = new JournalStore({
     adapter,
     userId: currentUserId,
@@ -176,17 +183,29 @@ async function build(): Promise<Services> {
       return currentUserId;
     },
     async syncTick() {
-      await store.drainDue();
-      await ensureAdopted();
-      if (currentUserId !== PENDING_USER_ID) {
-        try {
-          await pushDirty(adapter, supabaseRemote, currentUserId);
-          // Pull after push so a multi-device edit converges the same tick.
-          await pullUserData(adapter, supabaseRemote, currentUserId);
-          store.emitChange();
-        } catch (error) {
-          reportError(error, { op: 'syncTick' });
+      if (isSyncing) return; // B3: a tick is already running; it covers this one.
+      isSyncing = true;
+      try {
+        await store.drainDue();
+        await ensureAdopted();
+        if (currentUserId !== PENDING_USER_ID) {
+          try {
+            await pushDirty(adapter, supabaseRemote, currentUserId);
+            // Pull after push so a multi-device edit converges the same tick.
+            await pullUserData(adapter, supabaseRemote, currentUserId);
+            store.emitChange();
+            // B4: a full push+pull got through — data is reaching the server.
+            recordSyncSuccess(Date.now());
+          } catch (error) {
+            // B4: don't just swallow into a prod no-op. Count the failure so a
+            // permanently-stuck (e.g. poison-row) sync surfaces as "not backed
+            // up" instead of silently losing data on reinstall.
+            reportError(error, { op: 'syncTick' });
+            recordSyncFailure();
+          }
         }
+      } finally {
+        isSyncing = false;
       }
     },
     async refreshEntitlement() {
