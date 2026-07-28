@@ -5,8 +5,13 @@ closes the code half of production readiness. It does not close launch. Everythi
 this code into a shippable product is listed under "Blocked" below, and the first item there
 is the one that decides the schedule.
 
-Branch: `phase-7-production-harden`, 32 commits ahead of `main`, fast-forwards cleanly.
-PR: [#4](https://github.com/nirmalamin24bak/slate/pull/4).
+Branch: `phase-7-production-harden`, 38 commits ahead of `main`, fast-forwards cleanly.
+PR: [#4](https://github.com/nirmalamin24bak/slate/pull/4) — **green and mergeable, deliberately
+not merged.** Merging triggers the deploy job, which pushes twelve migrations to the live
+project and then applies the reference seed. `SUPABASE_DB_URL` does not exist yet, so today
+that run would apply the schema and fail at the seed — and `docs/ops-verification.md` (daily
+backups, PITR decision, one test restore) is still entirely unchecked. Item 0 of
+[`launch-gate.md`](launch-gate.md) is the order to do this in. Held by Nehal's call, 28 Jul.
 
 Gate re-run 2026-07-28 (the branch had sat idle since 13 Jul):
 
