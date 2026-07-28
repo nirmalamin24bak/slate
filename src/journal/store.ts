@@ -24,7 +24,7 @@ import {
   type EntryPatch,
 } from '../db/entriesRepo';
 import { getKitchen, getProfile, patchProfile, upsertWeight } from '../db/profileRepo';
-import { reportEvent } from '../lib/report';
+import { track } from '../lib/analytics';
 import { getExercise, getPackagedFood, loadDish } from '../db/referenceRepo';
 import type { EntryRow, ExerciseRow } from '../db/rows';
 import { toKitchen } from '../db/rows';
@@ -181,7 +181,9 @@ export class JournalStore {
             { retryable: 0 },
             this.deps.now().toISOString(),
           );
-          reportEvent('resolver_retry_exhausted', { entryId: row.id });
+          // No entry id: it joins to the row holding the user's raw_text, which
+          // is what spec/08 keeps out of analytics. The count is the signal.
+          track({ name: 'resolver_retry_exhausted' });
         }
       }
     }

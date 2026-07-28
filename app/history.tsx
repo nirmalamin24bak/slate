@@ -97,7 +97,7 @@ export default function History() {
             clipped ? (
               <Pressable
                 accessibilityRole="button"
-                onPress={() => router.push('/paywall' as Href)}
+                onPress={() => router.push('/paywall?gate=history_depth' as Href)}
                 style={styles.plusRow}
               >
                 <Text style={[type.label, { color: colors.inkMute }]}>

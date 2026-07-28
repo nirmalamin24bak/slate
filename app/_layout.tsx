@@ -4,12 +4,13 @@ import {
   InterTight_800ExtraBold,
 } from '@expo-google-fonts/inter-tight';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Appearance, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { screenOf, track } from '@/lib/analytics';
 import { useRemoteConfig } from '@/lib/remoteConfig';
 import { reportError } from '@/lib/report';
 import { services } from '@/lib/services';
@@ -57,11 +58,24 @@ function BreachBanner() {
   );
 }
 
+// One screen_viewed per navigation, in one place. Per-screen useEffects drift:
+// a new route ships untracked, or double-fires on a re-render. This reads the
+// router's own pathname, so it cannot disagree with where the user actually is.
+function ScreenTracker() {
+  const pathname = usePathname();
+  useEffect(() => {
+    const screen = screenOf(pathname);
+    if (screen) track({ name: 'screen_viewed', screen });
+  }, [pathname]);
+  return null;
+}
+
 function ThemedStack() {
   const theme = useTheme();
   return (
     <>
       <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
+      <ScreenTracker />
       <BreachBanner />
       <Stack
         screenOptions={{

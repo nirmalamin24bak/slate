@@ -10,8 +10,15 @@ import { ensureUserRows } from '../db/profileRepo';
 import { loadCatalogue } from '../db/referenceRepo';
 import { pullReference, pullUserData, pushDirty, type RemoteDb } from '../db/sync';
 import { JournalStore } from '../journal/store';
-import { resolve, TransportError, type ClassifyTransport } from '../resolver';
+import {
+  resolve,
+  TransportError,
+  type ClassifyTransport,
+  type ResolvedSegment,
+  type ResolveDeps,
+} from '../resolver';
 import { edgeTransport } from '../resolver/transport';
+import { configureAnalytics, confidenceBucket, track } from './analytics';
 import { refreshServerEntitlement } from './entitlementSync';
 import { newId } from './ids';
 import { getRemoteConfig, refreshRemoteConfig } from './remoteConfig';
@@ -75,6 +82,38 @@ const supabaseRemote: RemoteDb = {
   },
 };
 
+/**
+ * The one place a resolved line becomes a product event. Both numbers the
+ * week-8 dashboard is built on come from here: `unresolved_rate` and resolver
+ * p95 (spec/10). Wrapping the store's resolveText rather than instrumenting
+ * inside resolve() keeps the resolver pure and testable with no analytics.
+ *
+ * Nothing derived from what the user typed is sent (spec/08). `entry_unresolved`
+ * carries the *length* of the normalized text, so a failure on "2 roti" can be
+ * told apart from one on a paragraph, without either string.
+ */
+async function resolveAndTrack(text: string, deps: ResolveDeps): Promise<ResolvedSegment[]> {
+  const startedAt = Date.now();
+  const segments = await resolve(text, deps);
+  const resolveMs = Date.now() - startedAt;
+  for (const segment of segments) {
+    const { intent, ref, confidence } = segment.resolution;
+    if (intent === 'unresolved') {
+      track({ name: 'entry_unresolved', normalized_len: segment.normalized.length });
+    } else {
+      track({
+        name: 'entry_resolved',
+        intent,
+        ref,
+        confidence_bucket: confidenceBucket(confidence),
+        resolve_ms: resolveMs,
+        source: segment.source,
+      });
+    }
+  }
+  return segments;
+}
+
 export interface Services {
   adapter: SqlAdapter;
   store: JournalStore;
@@ -102,6 +141,10 @@ async function build(): Promise<Services> {
   // install path configures on adoption instead. Non-blocking: the journal
   // must not wait on StoreKit.
   if (sessionUserId) {
+    // Same id for analytics (docs/analytics-handoff.md: identify(auth.uid())
+    // only, no traits) so product events and purchases line up without a
+    // second identifier. Inert unless the PostHog key and host are both set.
+    configureAnalytics(sessionUserId);
     void configurePurchases(sessionUserId);
     void refreshServerEntitlement(supabase); // authoritative Plus from the server
     void refreshRemoteConfig(supabase); // breach banner + resolver flag
@@ -156,7 +199,7 @@ async function build(): Promise<Services> {
   const store = new JournalStore({
     adapter,
     userId: currentUserId,
-    resolveText: (text) => resolve(text, { cache, transport, catalogue }),
+    resolveText: (text) => resolveAndTrack(text, { cache, transport, catalogue }),
     now: () => new Date(),
     newId,
   });
@@ -177,6 +220,7 @@ async function build(): Promise<Services> {
     await adoptPendingUser(adapter, realId);
     currentUserId = realId;
     store.reassignUser(realId);
+    configureAnalytics(realId);
     void configurePurchases(realId);
     void refreshServerEntitlement(supabase);
   }

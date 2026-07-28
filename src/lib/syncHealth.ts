@@ -17,6 +17,8 @@
 
 import { useSyncExternalStore } from 'react';
 
+import { track } from './analytics';
+
 // Consecutive failed ticks before we consider the local store not-backed-up.
 // A handful of transient offline ticks should not raise it; a genuinely stuck
 // push crosses it within a minute or two of ticks.
@@ -76,6 +78,12 @@ export function recordSyncFailure(): void {
     consecutiveFailures,
     lastSyncedAt: current.lastSyncedAt,
   });
+  // Once, on the crossing — not per failure. A tick runs every 30s, so an
+  // offline evening would otherwise be a hundred identical events. The signal
+  // worth having is "this install stopped backing up", which happens here.
+  if (consecutiveFailures === BACKED_UP_FAIL_THRESHOLD) {
+    track({ name: 'sync_failed', consecutive: consecutiveFailures });
+  }
 }
 
 /** Reset to initial (tests, and a user switching identity on adoption). */

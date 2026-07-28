@@ -12,6 +12,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { runTransaction, type SqlAdapter } from '../db/adapter';
+import { flushAnalytics, stopAnalytics, track } from './analytics';
 import { supabase } from './supabase';
 
 // User tables mirrored locally (spec/04). Reference mirrors and
@@ -55,6 +56,12 @@ export async function deleteAccount(adapter: SqlAdapter): Promise<void> {
     throw new DeleteFailed('server delete did not confirm');
   }
 
+  // The server has confirmed, so this happened. Flushed before the wipe: after
+  // stopAnalytics() below nothing more is sent, and the last thing we record
+  // must not be an event about someone who has left (spec/08 §2).
+  track({ name: 'delete_run' });
+  await flushAnalytics();
+
   // Local wipe is one transaction: a crash mid-loop must not leave the device
   // holding some erased-user rows under the next (new-person) session.
   await runTransaction(adapter, async () => {
@@ -68,4 +75,7 @@ export async function deleteAccount(adapter: SqlAdapter): Promise<void> {
   });
   await AsyncStorage.multiRemove([...LOCAL_KEYS]);
   await supabase.auth.signOut();
+  // No further events for this identity. The next launch signs in anonymously
+  // as a new user and configureAnalytics identifies that id instead.
+  stopAnalytics();
 }
