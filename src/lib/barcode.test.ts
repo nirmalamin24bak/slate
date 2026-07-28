@@ -1,11 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { parseOffResponse } from './barcode';
+import { fetchOffProduct, parseOffResponse } from './barcode';
 
-// Only the pure parser is tested here (spec/02 §D). fetchOffProduct hits the
-// network and is exercised on device. parseOffResponse must never fabricate an
-// energy value it doesn't have, and must reject anything unusable rather than
-// guess (a hallucinated number is a bug, not an estimate — non-negotiable #3).
+// parseOffResponse must never fabricate an energy value it doesn't have, and
+// must reject anything unusable rather than guess (a hallucinated number is a
+// bug, not an estimate — non-negotiable #3). fetchOffProduct is a thin wrapper
+// around it, tested here against a stubbed fetch: its contract is that EVERY
+// failure — offline, 404, unparseable body — returns null so the scanner can
+// show the honest "not in our database yet" line instead of throwing into the
+// UI (spec/09).
 
 const BARCODE = '8901234567890';
 
@@ -104,5 +107,76 @@ describe('parseOffResponse', () => {
     expect(parseOffResponse(BARCODE, undefined)).toBeNull();
     expect(parseOffResponse(BARCODE, 'not json')).toBeNull();
     expect(parseOffResponse(BARCODE, 42)).toBeNull();
+  });
+});
+
+describe('fetchOffProduct', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubFetch(impl: (url: string, init?: { signal?: AbortSignal }) => unknown) {
+    const spy = vi.fn(impl);
+    vi.stubGlobal('fetch', spy);
+    return spy;
+  }
+
+  it('requests only the three fields it needs, with the barcode encoded', async () => {
+    const spy = stubFetch(() => ({
+      ok: true,
+      json: async () => ({ status: 1, product: { product_name: 'Marie Gold' } }),
+    }));
+
+    const food = await fetchOffProduct('89012/34567890');
+
+    expect(food?.name).toBe('Marie Gold');
+    const url = String(spy.mock.calls[0]?.[0]);
+    // The barcode goes into the path, so an unencoded slash would change the
+    // route. It is also the ONLY thing we send — no user id, no raw text (spec/08).
+    expect(url).toContain('89012%2F34567890.json');
+    expect(url).toContain('fields=product_name,brands,nutriments');
+    expect(url).not.toContain(BARCODE);
+  });
+
+  it('passes the abort signal through so a closed scanner cancels the request', async () => {
+    const controller = new AbortController();
+    const spy = stubFetch(() => ({ ok: true, json: async () => ({ status: 1 }) }));
+
+    await fetchOffProduct(BARCODE, controller.signal);
+
+    expect(spy.mock.calls[0]?.[1]).toEqual({ signal: controller.signal });
+  });
+
+  it('a non-ok response → null, and the body is never read', async () => {
+    const json = vi.fn();
+    stubFetch(() => ({ ok: false, status: 404, json }));
+
+    expect(await fetchOffProduct(BARCODE)).toBeNull();
+    expect(json).not.toHaveBeenCalled();
+  });
+
+  it('a network failure (offline / abort) → null, never a throw', async () => {
+    stubFetch(() => {
+      throw new TypeError('Network request failed');
+    });
+
+    await expect(fetchOffProduct(BARCODE)).resolves.toBeNull();
+  });
+
+  it('an unparseable body → null, never a throw', async () => {
+    stubFetch(() => ({
+      ok: true,
+      json: async () => {
+        throw new SyntaxError('Unexpected token < in JSON');
+      },
+    }));
+
+    await expect(fetchOffProduct(BARCODE)).resolves.toBeNull();
+  });
+
+  it('a 200 with an unusable payload → null (the parser decides, not the status)', async () => {
+    stubFetch(() => ({ ok: true, json: async () => ({ status: 0 }) }));
+
+    expect(await fetchOffProduct(BARCODE)).toBeNull();
   });
 });

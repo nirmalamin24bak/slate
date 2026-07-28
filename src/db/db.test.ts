@@ -17,6 +17,7 @@ import {
   markEntriesSynced,
   nextPosition,
   patchEntry,
+  pullMergeEntries,
 } from './entriesRepo';
 import {
   ensureUserRows,
@@ -26,7 +27,11 @@ import {
   listDirtyWeights,
   listWeights,
   markWeightsSynced,
+  patchKitchen,
   patchProfile,
+  pullMergeKitchen,
+  pullMergeProfile,
+  pullMergeWeights,
   upsertWeight,
 } from './profileRepo';
 import {
@@ -40,11 +45,11 @@ import {
   replacePackagedFoods,
   upsertPackagedFoodLocal,
 } from './referenceRepo';
-import type { SqlValue } from './adapter';
+import type { SqlAdapter, SqlValue } from './adapter';
 import { adoptPendingUser, PENDING_USER_ID } from './adoption';
 import { migrate, SCHEMA_VERSION } from './schema';
 import { pullReference, pullUserData, pushDirty, type RemoteDb } from './sync';
-import type { EntryRow, WeightRow } from './rows';
+import type { EntryRow, KitchenRow, WeightRow } from './rows';
 import { toKitchen } from './rows';
 
 import { openTestDb } from '../../test/helpers/betterSqliteAdapter';
@@ -881,6 +886,125 @@ describe('sync', () => {
     await insertEntry(db, entry({ id: 'e1', raw_text: 'kept', updated_at: T0 }));
     await pullUserData(db, fakeRemote(), USER);
     expect((await getEntry(db, 'e1'))?.raw_text).toBe('kept');
+    db.close();
+  });
+});
+
+// The merge functions take server payloads as loose Record<string, SqlValue>,
+// because what comes back over the wire is not typed by us. Every column read
+// carries a `?? null` (or `?? 0`) fallback for exactly that reason. These tests
+// drive the fallbacks: a payload that omits columns must insert cleanly rather
+// than bind `undefined` (better-sqlite3 and expo-sqlite both throw on it), and
+// must never fabricate a value for a column the server didn't send.
+describe('down-sync merge — sparse payloads and guards', () => {
+  // A pushed singleton is clean. There is no exported "mark profile synced"
+  // (pushDirty clears it inline), so the tests below clear the flag directly —
+  // the point under test is the merge guard, not how the flag got cleared.
+  const markProfileClean = (db: SqlAdapter) =>
+    db.run('UPDATE profiles SET dirty = 0 WHERE user_id = ?', [USER]);
+
+  const SPARSE_ENTRY: Record<string, SqlValue> = {
+    // only the NOT NULL columns; every nullable one is absent
+    id: 'sparse-1',
+    user_id: USER,
+    log_date: '2026-07-11',
+    position: 0,
+    raw_text: 'paani',
+    intent: 'water',
+    status: 'resolved',
+    calc_version: 'engine-v1',
+    created_at: T0,
+    updated_at: T0,
+  };
+
+  it('entries: a payload omitting every nullable column inserts with nulls, not undefined', async () => {
+    const db = await openTestDb();
+    await pullMergeEntries(db, [SPARSE_ENTRY]);
+    const row = await getEntry(db, 'sparse-1');
+    expect(row?.raw_text).toBe('paani');
+    expect(row?.nickname).toBeNull();
+    expect(row?.kcal).toBeNull();
+    expect(row?.water_ml).toBeNull();
+    expect(row?.deleted_at).toBeNull();
+    // the two `?? 0` fallbacks: NOT NULL columns the payload didn't carry
+    expect(row?.is_included).toBe(0);
+    expect(row?.was_calibrated).toBe(0);
+    // never dirty on arrival — it came FROM the server
+    expect(row?.dirty).toBe(0);
+    expect(row?.retryable).toBe(0);
+    db.close();
+  });
+
+  it('weights: a payload omitting deleted_at merges on the natural key', async () => {
+    const db = await openTestDb();
+    await pullMergeWeights(db, [
+      {
+        id: 'w-sparse',
+        user_id: USER,
+        log_date: '2026-07-11',
+        weight_kg: 79.5,
+        source: 'journal',
+        created_at: T0,
+        updated_at: T0,
+      },
+    ]);
+    const [row] = await listWeights(db, USER);
+    expect(row?.weight_kg).toBe(79.5);
+    expect(row?.deleted_at).toBeNull();
+    expect(row?.dirty).toBe(0);
+    db.close();
+  });
+
+  it('singletons: no row, or a row without updated_at / user_id, is a no-op', async () => {
+    const db = await openTestDb();
+    await ensureUserRows(db, USER, T0);
+    await patchProfile(db, USER, { height_cm: 170 }, T0);
+    await markProfileClean(db);
+
+    await pullMergeProfile(db, undefined);
+    await pullMergeProfile(db, { user_id: USER, height_cm: 199 }); // no updated_at
+    await pullMergeProfile(db, { updated_at: T2, height_cm: 199 }); // no user_id
+    await pullMergeKitchen(db, undefined);
+
+    expect((await getProfile(db, USER))?.height_cm).toBe(170);
+    db.close();
+  });
+
+  it('singletons: a payload carrying no data column touches no data column', async () => {
+    const db = await openTestDb();
+    await ensureUserRows(db, USER, T0);
+    await patchProfile(db, USER, { height_cm: 170, calorie_goal: 1800 }, T0);
+    await markProfileClean(db);
+
+    // updated_at is itself a writable column, so the UPDATE still runs and the
+    // local watermark advances — but nothing the user set may change.
+    await pullMergeProfile(db, { user_id: USER, updated_at: T2 });
+    const row = await getProfile(db, USER);
+    expect(row?.height_cm).toBe(170);
+    expect(row?.calorie_goal).toBe(1800);
+    expect(row?.updated_at).toBe(T2);
+    db.close();
+  });
+
+  it('singletons: writes only the columns the server sent, keeps the rest local', async () => {
+    const db = await openTestDb();
+    await ensureUserRows(db, USER, T0);
+    await patchProfile(db, USER, { height_cm: 170, calorie_goal: 1800 }, T0);
+    await markProfileClean(db);
+
+    await pullMergeProfile(db, { user_id: USER, updated_at: T2, height_cm: 165 });
+    const row = await getProfile(db, USER);
+    expect(row?.height_cm).toBe(165); // sent → taken
+    expect(row?.calorie_goal).toBe(1800); // omitted → local value survives
+    db.close();
+  });
+
+  it('kitchen: a locally-dirty singleton is never overwritten by the server', async () => {
+    const db = await openTestDb();
+    await ensureUserRows(db, USER, T0);
+    await patchKitchen(db, USER, { katori_ml: 250 }, T1); // dirty = 1
+    await pullMergeKitchen(db, { user_id: USER, updated_at: T2, katori_ml: 150 });
+    expect(toKitchen((await getKitchen(db, USER)) as KitchenRow).katoriMl).toBe(250);
     db.close();
   });
 });
