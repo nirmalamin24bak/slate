@@ -45,9 +45,11 @@ do $$ begin
 end $$;
 `;
 
-// One test user, so the foreign keys into auth.users have something to point at
-// and the RLS smoke test below has a row to own.
+// Two test users. RLS is the entire security boundary of a no-login product, so
+// "does A see B" needs two identities, not one.
 const TEST_UID = '11111111-1111-1111-1111-111111111111';
+const USER_A = TEST_UID;
+const USER_B = '22222222-2222-2222-2222-222222222222';
 
 function sh(cmd, opts = {}) {
   return execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts });
@@ -112,6 +114,70 @@ function scalar(sql) {
     ],
     { encoding: 'utf8' },
   ).trim();
+}
+
+/**
+ * Run SQL as an authenticated end user, the way PostgREST does: the
+ * `authenticated` role, with the caller's uid in the request GUCs that
+ * auth.uid() reads.
+ *
+ * Both spellings are set on purpose. This image's auth.uid() reads the older
+ * `request.jwt.claim.sub`; a newer Supabase reads `sub` out of the
+ * `request.jwt.claims` JSON. Setting both means the harness tests OUR policies
+ * rather than the image's vintage.
+ *
+ * Everything runs inside a transaction that is rolled back, so an RLS probe
+ * that DOES modify a row cannot leak into a later check. `set local` is also
+ * only meaningful inside a transaction.
+ */
+function psqlAs(uid, sql) {
+  return execFileSync(
+    'docker',
+    [
+      'exec',
+      '-i',
+      NAME,
+      'psql',
+      '-U',
+      'postgres',
+      '-d',
+      'postgres',
+      '-q',
+      '-t',
+      '-A',
+      '-v',
+      'ON_ERROR_STOP=1',
+    ],
+    {
+      input:
+        `begin;\n` +
+        `set local role authenticated;\n` +
+        `set local request.jwt.claim.sub = '${uid}';\n` +
+        `set local request.jwt.claims = '{"sub":"${uid}","role":"authenticated"}';\n` +
+        `${sql}\nrollback;\n`,
+      encoding: 'utf8',
+      // Capture stderr rather than letting it through: a refused write is a
+      // PASSING result here, and printing its ERROR line makes a green run look
+      // broken. Genuine failures still surface as a ✗ from check().
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  ).trim();
+}
+
+/** Last value printed by SQL run as `uid`. */
+function scalarAs(uid, sql) {
+  const lines = psqlAs(uid, sql).split(/\r?\n/).filter(Boolean);
+  return lines[lines.length - 1] ?? '';
+}
+
+/** True when the statement was REFUSED (an RLS WITH CHECK violation raises). */
+function deniedAs(uid, sql) {
+  try {
+    psqlAs(uid, sql);
+    return false;
+  } catch {
+    return true;
+  }
 }
 
 function teardown() {
@@ -291,6 +357,169 @@ try {
       "select count(*) from pg_constraint where conrelid = 'public.entries'::regclass and contype = 'c' and not convalidated",
     ),
     0,
+  );
+
+  // -------------------------------------------------------------------------
+  // RLS cross-user gate (audit C6).
+  //
+  // Slate has no login. RLS is the ONLY thing between one person's journal and
+  // another's, and the test that proved it — test/rls-cross-user.test.ts — is
+  // opt-in behind RLS_TEST=1 and has therefore never run in CI. It cannot run
+  // here either: it drives supabase-js auth, and this container has Postgres
+  // but no GoTrue. So the same property is asserted where it actually lives,
+  // in the policies, against the full migration chain.
+  //
+  // The precedent for why this must be blocking: resolution_cache shipped with
+  // `for select using (true)` and stayed that way for four days (migration
+  // ...0010). A green build said nothing.
+  // -------------------------------------------------------------------------
+  console.log('\nRLS cross-user gate:');
+
+  psql(`
+    insert into auth.users (id) values ('${USER_B}') on conflict do nothing;
+    insert into profiles (user_id) values ('${USER_A}'),('${USER_B}') on conflict do nothing;
+    insert into kitchen (user_id) values ('${USER_A}'),('${USER_B}') on conflict do nothing;
+    insert into entries (id, user_id, log_date, position, raw_text, intent, status, calc_version)
+    values ('aaaaaaaa-0000-0000-0000-000000000001','${USER_A}','2026-07-10',0,'A dal','food','resolved','v1'),
+           ('bbbbbbbb-0000-0000-0000-000000000001','${USER_B}','2026-07-10',0,'B dal','food','resolved','v1')
+    on conflict do nothing;
+    insert into weights (id, user_id, log_date, weight_kg, source)
+    values ('aaaaaaaa-0000-0000-0000-000000000002','${USER_A}','2026-07-10',70,'journal'),
+           ('bbbbbbbb-0000-0000-0000-000000000002','${USER_B}','2026-07-10',80,'journal')
+    on conflict do nothing;
+    insert into custom_dishes (id, user_id, name, default_unit, default_qty)
+    values ('aaaaaaaa-0000-0000-0000-000000000003','${USER_A}','A dish','katori',1),
+           ('bbbbbbbb-0000-0000-0000-000000000003','${USER_B}','B dish','katori',1)
+    on conflict do nothing;
+    insert into custom_dish_ingredients (custom_dish_id, ingredient_id, grams)
+    select id, 'IFCT_A001', 10 from custom_dishes on conflict do nothing;
+    insert into entitlements (user_id, active) values ('${USER_A}', true) on conflict do nothing;
+  `);
+
+  // Read isolation: two rows exist in each table; a caller must see exactly one.
+  for (const table of ['entries', 'weights', 'profiles', 'kitchen', 'custom_dishes']) {
+    check(`A sees only its own ${table}`, scalarAs(USER_A, `select count(*) from ${table};`), 1);
+    check(`B sees only its own ${table}`, scalarAs(USER_B, `select count(*) from ${table};`), 1);
+  }
+  // custom_dish_ingredients has no user_id: ownership flows through the parent.
+  check(
+    'B cannot see A custom_dish_ingredients (ownership via parent dish)',
+    scalarAs(
+      USER_B,
+      `select count(*) from custom_dish_ingredients where custom_dish_id = 'aaaaaaaa-0000-0000-0000-000000000003';`,
+    ),
+    0,
+  );
+
+  // Write isolation. A denied UPDATE/DELETE is silent — it matches no rows —
+  // so assert the affected count, not an error.
+  check(
+    'B cannot update A entries',
+    scalarAs(
+      USER_B,
+      `with u as (update entries set raw_text = 'pwned' where user_id = '${USER_A}' returning 1) select count(*) from u;`,
+    ),
+    0,
+  );
+  check(
+    'B cannot delete A weights',
+    scalarAs(
+      USER_B,
+      `with d as (delete from weights where user_id = '${USER_A}' returning 1) select count(*) from d;`,
+    ),
+    0,
+  );
+  // An INSERT that violates WITH CHECK does raise. This is the one that matters
+  // most: it is how a patched client would plant rows in someone else's journal.
+  //
+  // The positive control below runs the SAME statement differing only in the
+  // owner. Without it, a typo in the SQL would also "raise" and the denial test
+  // would pass while proving nothing.
+  const smuggle = (owner) =>
+    `insert into entries (id, user_id, log_date, position, raw_text, intent, status, calc_version)
+     values (gen_random_uuid(), '${owner}', '2026-07-10', 9, 'smuggled', 'food', 'resolved', 'v1');`;
+  check('B cannot insert a row owned by A', deniedAs(USER_B, smuggle(USER_A)), true);
+  check(
+    'control: the same insert succeeds for its own owner',
+    deniedAs(USER_B, smuggle(USER_B)),
+    false,
+  );
+
+  // Entitlements are readable by their owner and writable by nobody: Plus is a
+  // server grant, and a client that could UPDATE this row would be Plus for free.
+  check(
+    'B cannot see A entitlement row',
+    scalarAs(USER_B, `select count(*) from entitlements where user_id = '${USER_A}';`),
+    0,
+  );
+  check(
+    'a client cannot grant itself Plus',
+    scalarAs(
+      USER_B,
+      `with u as (update entitlements set active = true where user_id = '${USER_B}' returning 1) select count(*) from u;`,
+    ),
+    0,
+  );
+
+  // Tables a client must not read at all. resolution_cache is the proprietary
+  // phrase corpus (...0010); the rest are internal bookkeeping with RLS enabled
+  // and no policies, which denies everything to a non-bypassing role.
+  for (const table of [
+    'resolution_cache',
+    'resolution_cache_pending',
+    'resolver_rate_limits',
+    'resolver_global_budget',
+    'entitlement_refresh_limits',
+    'account_deletions',
+  ]) {
+    check(
+      `${table} is not readable by a client`,
+      scalarAs(USER_A, `select count(*) from ${table};`),
+      0,
+    );
+  }
+
+  // app_config is the deliberate exception: operational flags, readable by all,
+  // writable by none (it drives the breach banner and the resolver kill switch).
+  check('app_config is readable', scalarAs(USER_A, 'select count(*) from app_config;'), 1);
+  check(
+    'app_config is not writable by a client',
+    scalarAs(
+      USER_A,
+      `with u as (update app_config set breach_banner = 'spoofed' where id = 1 returning 1) select count(*) from u;`,
+    ),
+    0,
+  );
+
+  // Generic sweep, and the real point of this block: EVERY security-definer
+  // function must have EXECUTE revoked from both client roles. A definer
+  // function runs as its owner and bypasses RLS, so one that keeps the default
+  // PUBLIC grant is a hole — which is exactly what happened to
+  // reap_resolver_state (migration ...20260712000001). Naming functions
+  // individually would only re-check the ones we remembered; this catches the
+  // next one somebody forgets.
+  check(
+    'no SECURITY DEFINER function is executable by anon/authenticated',
+    scalar(`
+      select coalesce(string_agg(distinct p.proname || '/' || r.rolname, ', '), '(none)')
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      cross join (values ('anon'),('authenticated')) as r(rolname)
+      where n.nspname = 'public' and p.prosecdef
+        and has_function_privilege(r.rolname, p.oid, 'execute')`),
+    '(none)',
+  );
+
+  // The mirror image: the sync RPCs are SECURITY INVOKER precisely so RLS still
+  // applies to them, and they MUST stay callable or the app cannot push at all.
+  check(
+    'the sync_upsert_* RPCs remain callable by authenticated',
+    scalar(`
+      select count(*) from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname like 'sync\\_upsert%'
+        and has_function_privilege('authenticated', p.oid, 'execute')`),
+    4,
   );
 
   console.log('');

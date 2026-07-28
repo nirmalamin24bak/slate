@@ -117,7 +117,7 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           if git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
-             | grep -qE '^(supabase/|scripts/(seed|ifct))'; then
+             | grep -qE '^(supabase/|scripts/(seed|ifct|db-migration-test))'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
