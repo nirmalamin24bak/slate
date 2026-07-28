@@ -53,12 +53,14 @@ export default defineConfig({
         // merges' sparse-payload fallbacks took the real number to 81.4%; the
         // floors below now sit under it with room, and above where it was.
         'src/db/**': { statements: 95, branches: 80, functions: 95, lines: 98 },
-        // journal branches sit below the engine/resolver bar because the
-        // uncovered ones are defensive nullish-coalescing on already-parsed
-        // date parts (dates.ts `?? 1970`) and recompute lookup-miss paths
-        // that only fire on a corrupt local mirror. The reachable offline
-        // contract — queue, drain, requeue, degrade — is fully exercised.
-        'src/journal/**': { statements: 90, branches: 78, functions: 90, lines: 95 },
+        // Raised 28 Jul 2026 (was 90/78/90/95, and branches sat at 79.11%).
+        // The degraded inputs recompute has to survive — a barcode logged in
+        // kilograms, a packaged row with no energy, an exercise whose ref left
+        // the mirror, a stale steps burn — and the store's subscription seams
+        // are now covered, taking branches to 84.58% and functions to 100%.
+        // What remains uncovered is defensive coalescing that only fires on a
+        // corrupt local mirror.
+        'src/journal/**': { statements: 96, branches: 83, functions: 100, lines: 98 },
         'src/onboarding/**': { statements: 100, branches: 95, functions: 100, lines: 100 },
         // Phase-5 pure surfaces: stats aggregation and the export builder are
         // fully deterministic — 100%. barcode joined them 28 Jul 2026:

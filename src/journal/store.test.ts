@@ -280,3 +280,58 @@ describe('JournalStore — line editing', () => {
     expect(view.totals.consumedKcal).toBe(0);
   });
 });
+
+// The store is the only thing the journal screen subscribes to. These are the
+// seams the UI depends on and nothing exercised: who gets told when a row
+// changes, that unsubscribing actually stops it, and that a re-homed session
+// keeps writing under the new uid rather than the placeholder.
+describe('JournalStore — the subscription contract', () => {
+  it('emitChange notifies every listener, and unsubscribing stops it', () => {
+    const seen: JournalEvent[] = [];
+    const off = h.store.on((e) => seen.push(e));
+
+    h.store.emitChange();
+    expect(seen).toEqual([{ type: 'change' }]);
+
+    off();
+    h.store.emitChange();
+    expect(seen).toHaveLength(1); // the unsubscribed listener heard nothing more
+    // the harness listener is still attached, so the store itself still emits
+    expect(h.events.filter((e) => e.type === 'change')).toHaveLength(2);
+  });
+
+  it('recomputeToday refreshes the open day and tells the screen to re-read', async () => {
+    await h.store.addLine('2 roti', DAY);
+    const before = h.events.length;
+
+    await h.store.recomputeToday(DAY);
+
+    expect(h.events.length).toBeGreaterThan(before);
+    expect(h.events.at(-1)).toEqual({ type: 'change' });
+    // and the day still reads correctly afterwards
+    expect((await h.store.day(DAY)).totals.consumedKcal).toBeGreaterThan(200);
+  });
+
+  it('reassignUser re-homes writes onto the adopted session', async () => {
+    // Offline install: rows land under a placeholder uid, the anonymous
+    // session arrives later, the services layer rewrites the existing rows and
+    // calls this so the NEXT write goes to the real user (spec/09).
+    h.store.reassignUser('user-adopted');
+    await h.store.addLine('9000 steps', DAY);
+
+    const rows = await listDay(h.db, 'user-adopted', DAY);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.user_id).toBe('user-adopted');
+    // nothing new landed under the old identity
+    expect(await listDay(h.db, USER, DAY)).toHaveLength(0);
+  });
+
+  it('a listener added twice is held once — no duplicate notifications', () => {
+    const seen: JournalEvent[] = [];
+    const listener = (e: JournalEvent) => seen.push(e);
+    h.store.on(listener);
+    h.store.on(listener);
+    h.store.emitChange();
+    expect(seen).toHaveLength(1);
+  });
+});

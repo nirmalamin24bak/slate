@@ -98,6 +98,26 @@ describe('dates', () => {
     expect(isWithinFreeWindow('2026-06-09', '2026-07-10')).toBe(false);
     expect(isWithinFreeWindow('2026-07-11', '2026-07-10')).toBe(false);
   });
+
+  it('a malformed key yields a real, distant date — never NaN', () => {
+    // Day keys come from the device and from synced rows, so a corrupt one is
+    // possible. What matters is that arithmetic on it stays finite: a
+    // "NaN-NaN-NaN" key would poison every comparison downstream — the
+    // scrubber, the streak, the free-window check — and each of those would
+    // fail in a different, confusing place.
+    //
+    // A missing part falls back (`?? 1`), so a truncated key still parses:
+    expect(addDays('2026', 0)).toBe('2026-01-01');
+    // An empty key does NOT hit the `?? 1970` fallback — ''.split('-') is
+    // [''], and Number('') is 0, not undefined. Year 0 is then mapped to 1900
+    // by the Date constructor's two-digit-year rule. Wrong, but real and
+    // consistent, which is the property the callers need.
+    expect(addDays('', 1)).toBe('1900-01-02');
+    expect(daysBetween('', '1900-01-11')).toBe(10);
+    expect(Number.isFinite(daysBetween('', '2026-07-10'))).toBe(true);
+    // and it lands far outside the free window rather than silently inside it
+    expect(isWithinFreeWindow('', '2026-07-10')).toBe(false);
+  });
 });
 
 describe('composeDay — display', () => {
@@ -423,5 +443,145 @@ describe('recomputeDay — write-time math', () => {
       recomputeDay([lean], lookups, { ...ctx, personalization: 'low-cal' }).get(lean.id)?.kcal ?? 0;
     expect(leanKcal).toBeLessThan(plainKcal); // it does lean the dish
     expect(leanKcal).toBeGreaterThanOrEqual(plainKcal * 0.8 - 1e-6); // never past the clamp
+  });
+});
+
+// Paths that only fire on input the happy-path tests never produce: a barcode
+// logged in kilograms, a packaged row with no energy value, a resolved
+// exercise the mirror no longer knows, a step count too small to bill. Each is
+// something a real journal produces on a bad day, and each one silently
+// wrong is a wrong number in someone's budget.
+describe('recomputeDay — the degraded and edge inputs', () => {
+  const lookups = {
+    dishes: new Map([['dish_roti', ROTI]]),
+    exercises: new Map([['ex_walk', { met: 3.5, unit: 'minutes' as const, is_ambulatory: 1 }]]),
+    packagedFoods: new Map([
+      [
+        '890123',
+        {
+          barcode: '890123',
+          name: 'Biscuit',
+          kcal_100g: 480,
+          protein_100g: 6,
+          carbs_100g: 70,
+          fat_100g: 18,
+          fiber_100g: 2,
+          sugar_100g: 24,
+        },
+      ],
+      [
+        '890999',
+        {
+          barcode: '890999',
+          name: 'Mystery Snack',
+          kcal_100g: null,
+          protein_100g: null,
+          carbs_100g: null,
+          fat_100g: null,
+          fiber_100g: null,
+          sugar_100g: null,
+        },
+      ],
+    ]),
+  };
+  const ctx = { kitchen: KITCHEN, kitchenIsAssumed: false, weightKg: 85, personalization: null };
+
+  it('a packaged food in kg or litres converts at 1000, not 1', () => {
+    const inKg = row({ intent: 'food', resolved_ref: '890123', qty: 0.05, unit: 'kg' });
+    const inG = row({ intent: 'food', resolved_ref: '890123', qty: 50, unit: 'g' });
+    const patches = recomputeDay([inKg, inG], lookups, ctx);
+    expect(patches.get(inKg.id)?.kcal).toBeCloseTo(240, 6);
+    expect(patches.get(inKg.id)?.kcal).toBeCloseTo(patches.get(inG.id)?.kcal ?? 0, 6);
+  });
+
+  it('a packaged food in a portion unit degrades rather than guessing a weight', () => {
+    // A barcode has no recipe, so "1 katori of Britannia" has no gram basis.
+    // Guessing one would be a fabricated number (non-negotiable #3).
+    const katori = row({ intent: 'food', resolved_ref: '890123', qty: 1, unit: 'katori' });
+    expect(recomputeDay([katori], lookups, ctx).get(katori.id)).toEqual({
+      status: 'unresolved',
+      retryable: 1,
+    });
+  });
+
+  it('a packaged food with no energy value degrades — never zero calories', () => {
+    // Open Food Facts often has a product with no per-100g energy. Zero would
+    // read as "this snack is free", which is worse than an honest ↻.
+    const mystery = row({ intent: 'food', resolved_ref: '890999', qty: 50, unit: 'g' });
+    expect(recomputeDay([mystery], lookups, ctx).get(mystery.id)).toEqual({
+      status: 'unresolved',
+      retryable: 1,
+    });
+  });
+
+  it('a food row resolved without a qty degrades instead of computing on null', () => {
+    const noQty = row({ intent: 'food', resolved_ref: 'dish_roti', qty: null, unit: 'roti' });
+    expect(recomputeDay([noQty], lookups, ctx).get(noQty.id)).toEqual({
+      status: 'unresolved',
+      retryable: 1,
+    });
+  });
+
+  it('missing context reads as home — the calibrated path, not the restaurant one', () => {
+    const noContext = row({
+      intent: 'food',
+      resolved_ref: 'dish_roti',
+      qty: 2,
+      unit: 'roti',
+      context: null,
+    });
+    const atHome = row({
+      intent: 'food',
+      resolved_ref: 'dish_roti',
+      qty: 2,
+      unit: 'roti',
+      context: 'home',
+    });
+    const patches = recomputeDay([noContext], lookups, ctx);
+    const home = recomputeDay([atHome], lookups, ctx);
+    expect(patches.get(noContext.id)?.kcal).toBeCloseTo(home.get(atHome.id)?.kcal ?? 0, 9);
+    expect(patches.get(noContext.id)?.was_calibrated).toBe(1);
+  });
+
+  it('an assumed kitchen leaves a dish uncalibrated even at home', () => {
+    const roti = row({
+      intent: 'food',
+      resolved_ref: 'dish_roti',
+      qty: 2,
+      unit: 'roti',
+      context: 'home',
+    });
+    const patches = recomputeDay([roti], lookups, { ...ctx, kitchenIsAssumed: true });
+    expect(patches.get(roti.id)?.was_calibrated).toBe(0);
+  });
+
+  it('an exercise whose ref left the mirror degrades, and one with no qty too', () => {
+    const ghost = row({ intent: 'exercise', resolved_ref: 'ex_gone', qty: 30, unit: 'minutes' });
+    const noQty = row({ intent: 'exercise', resolved_ref: 'ex_walk', qty: null, unit: 'minutes' });
+    const patches = recomputeDay([ghost, noQty], lookups, ctx);
+    expect(patches.get(ghost.id)).toEqual({ status: 'unresolved', retryable: 1 });
+    expect(patches.get(noQty.id)).toEqual({ status: 'unresolved', retryable: 1 });
+  });
+
+  it('steps under the 3,000 baseline bill nothing, and a stale burn is cleared', () => {
+    // baseline = BMR × 1.2 already contains the first ~3,000 steps
+    // (non-negotiable #5), so they must not credit a second time. A fresh row
+    // already says null/0, so recompute emits no patch at all — that is the
+    // no-op drop working, not the rule being skipped.
+    const fresh = row({ intent: 'steps', resolved_ref: null, qty: 2500, step_count: 2500 });
+    expect(recomputeDay([fresh], lookups, ctx).get(fresh.id)).toBeUndefined();
+
+    // A row carrying a burn from an earlier, larger step count must lose it
+    // rather than keep crediting calories the user did not walk.
+    const stale = row({
+      intent: 'steps',
+      resolved_ref: null,
+      qty: 2500,
+      step_count: 2500,
+      kcal: -180,
+    });
+    const patch = recomputeDay([stale], lookups, ctx).get(stale.id);
+    expect(patch?.kcal).toBeNull();
+    expect(patch?.is_included).toBe(0); // it is the winner, just worth nothing
   });
 });
