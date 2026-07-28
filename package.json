@@ -64,7 +64,7 @@
     "brace-expansion@^5": "^5.0.8"
   },
   "lint-staged": {
-    "*.{ts,tsx,js}": [
+    "*.{ts,tsx,js,mjs,cjs}": [
       "eslint --fix",
       "prettier --write"
     ],

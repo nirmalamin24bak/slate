@@ -53,7 +53,10 @@ export function validateDishes(dishes, refMap, knownIngredientIds) {
     // A volume unit means the served weight comes from the katori/glass, not
     // from the raw recipe — without serving_g the engine would scale a served
     // weight against a dry basis and multiply the dish (see units.ts).
-    if (['katori', 'cup', 'glass', 'ml', 'l'].includes(dish.default_unit) && !('serving_g' in dish)) {
+    if (
+      ['katori', 'cup', 'glass', 'ml', 'l'].includes(dish.default_unit) &&
+      !('serving_g' in dish)
+    ) {
       errors.push(
         `${dish.id}: a ${dish.default_unit}-default dish must declare serving_g — a number, ` +
           `or null with a note saying why the recipe grams are already the served grams`,
@@ -155,10 +158,11 @@ export function dishesToSql(dishes, refMap) {
     for (const di of d.ingredients) pairs.push([d.id, refMap[di.ref], di.grams, di.ref]);
 
   const ingredientValues = pairs
-    .map(([dishId, ingredientId, grams, ref]) =>
-      // the ref is kept as a comment: the json says "potato", the table says
-      // IFCT_F006, and a reviewer reading this file needs both.
-      `  (${sqlLit(dishId)}, ${sqlLit(ingredientId)}, ${sqlLit(grams)})  -- ${ref}`,
+    .map(
+      ([dishId, ingredientId, grams, ref]) =>
+        // the ref is kept as a comment: the json says "potato", the table says
+        // IFCT_F006, and a reviewer reading this file needs both.
+        `  (${sqlLit(dishId)}, ${sqlLit(ingredientId)}, ${sqlLit(grams)})  -- ${ref}`,
     )
     .join(',\n');
 
