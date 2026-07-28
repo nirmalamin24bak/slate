@@ -146,6 +146,57 @@ async function maybeCacheWrite(userId: string, line: string, reply: string): Pro
 }
 
 /**
+ * Global cache read (spec/05: "cache normalized_text → resolution, globally",
+ * hit rate above 90% within weeks; MASTER calls this "the architecture").
+ *
+ * This was missing entirely — the function wrote the cache and never read it,
+ * and clients cannot read the table (migration ...0010 revoked select), so the
+ * global cache served nothing. Every user paid a model call for "2 roti".
+ *
+ * A hit returns the same shape the model would have produced, so the client's
+ * validation path is unchanged: it re-validates a cache-served resolution
+ * exactly as it re-validates model output (security F2), and mirrors it locally
+ * so the next same-device repeat never leaves the phone.
+ *
+ * `context` is recomputed from the line rather than stored, because a cache row
+ * is only written when a token scan can reconstruct it (F4). qty/confidence are
+ * `numeric` columns, which PostgREST returns as strings — they must be coerced,
+ * or the client's `typeof qty === 'number'` check rejects every hit.
+ */
+async function cacheLookup(line: string): Promise<string | null> {
+  if (line.length > 64 || !isCanonical(line)) return null;
+  const { data, error } = await service
+    .from('resolution_cache')
+    .select('intent, resolved_ref, qty, unit, confidence')
+    .eq('normalized_text', line)
+    .maybeSingle();
+  if (error || !data) return null;
+
+  const row = data as Record<string, unknown>;
+  const num = (v: unknown): number | null => {
+    if (v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const confidence = num(row.confidence);
+  if (confidence === null) return null; // NOT NULL since ...0009, but never trust it
+
+  const reply = JSON.stringify({
+    intent: row.intent,
+    ref: typeof row.resolved_ref === 'string' ? row.resolved_ref : null,
+    qty: num(row.qty),
+    unit: typeof row.unit === 'string' ? row.unit : null,
+    context: contextOf(line),
+    confidence,
+  });
+
+  // The reaper evicts by last_hit_at (...0011). A row served from cache is a
+  // hit; without this, the most-used phrases would be the ones reaped.
+  await service.rpc('resolver_cache_touch', { p_key: line });
+  return reply;
+}
+
+/**
  * Server-authoritative Plus check (plan B2): active AND not expired. Read with
  * the service role so it cannot be spoofed by the caller. Defaults to false on
  * any error — Plus is a grant, never assumed.
@@ -205,6 +256,17 @@ Deno.serve(async (req) => {
   });
   if (rateError) return json(500, { error: 'rate check failed' });
   if (!allowed) return json(429, { error: 'rate limited' });
+
+  // Cache before spend: after the rate check (so a script cannot hammer the
+  // cache for free) but before the catalogue load and the model call. A hit
+  // costs one indexed primary-key lookup and skips both. It also does not touch
+  // the daily model budget, which counts served model calls only (...0004).
+  try {
+    const cached = await cacheLookup(body.line);
+    if (cached) return json(200, { reply: cached, source: 'cache' });
+  } catch {
+    // A cache failure must never fail a request the model can still answer.
+  }
 
   try {
     const system = await systemPrompt();

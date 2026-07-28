@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { sqliteCacheStore } from './cacheStore';
+import { MAX_LOCAL_CACHE_ROWS, sqliteCacheStore } from './cacheStore';
 import {
   getEntry,
   insertEntry,
@@ -463,7 +463,58 @@ describe('cacheStore', () => {
       'SELECT hit_count FROM resolution_cache WHERE normalized_text = ?',
       ['2 roti'],
     );
+    // write, read, write — a read counts too, because eviction sorts on usage
+    // and a phrase that keeps being read is exactly what must not be dropped.
+    expect(row?.hit_count).toBe(3);
+    db.close();
+  });
+
+  it('a read marks the row used, so eviction can tell popular from stale', async () => {
+    const db = await openTestDb();
+    const store = sqliteCacheStore(db, { now: () => new Date('2026-07-10T09:00:00.000Z') });
+    await store.put('chai', {
+      intent: 'food',
+      ref: 'dish_chai',
+      qty: 1,
+      unit: null,
+      confidence: 1,
+    });
+    await store.get('chai');
+    const row = await db.get<{ hit_count: number; last_hit_at: string | null }>(
+      'SELECT hit_count, last_hit_at FROM resolution_cache WHERE normalized_text = ?',
+      ['chai'],
+    );
     expect(row?.hit_count).toBe(2);
+    expect(row?.last_hit_at).toBe('2026-07-10T09:00:00.000Z');
+    db.close();
+  });
+
+  it('the mirror is bounded, and evicts what is least used — not what is newest', async () => {
+    const db = await openTestDb();
+    let tick = 0;
+    const store = sqliteCacheStore(db, {
+      now: () => new Date(Date.parse('2026-07-10T09:00:00.000Z') + tick++ * 1000),
+    });
+    const write = (key: string) =>
+      store.put(key, { intent: 'food', ref: 'dish_roti', qty: 1, unit: 'roti', confidence: 0.9 });
+
+    // fill exactly to the bound
+    for (let i = 0; i < MAX_LOCAL_CACHE_ROWS; i++) await write(`phrase ${i}`);
+    expect((await db.get<{ n: number }>('SELECT COUNT(*) AS n FROM resolution_cache'))?.n).toBe(
+      MAX_LOCAL_CACHE_ROWS,
+    );
+
+    // "2 roti" is read often; it must survive the next writes
+    await write('2 roti');
+    for (let i = 0; i < 5; i++) await store.get('2 roti');
+
+    for (let i = 0; i < 10; i++) await write(`newcomer ${i}`);
+
+    const count = (await db.get<{ n: number }>('SELECT COUNT(*) AS n FROM resolution_cache'))?.n;
+    expect(count).toBe(MAX_LOCAL_CACHE_ROWS); // never grows past the bound
+    expect(await store.get('2 roti')).not.toBeNull(); // the used row stays
+    // and the newest writes are still there — eviction is by usage, not age
+    expect(await store.get('newcomer 9')).not.toBeNull();
     db.close();
   });
 });
@@ -1005,6 +1056,47 @@ describe('down-sync merge — sparse payloads and guards', () => {
     await patchKitchen(db, USER, { katori_ml: 250 }, T1); // dirty = 1
     await pullMergeKitchen(db, { user_id: USER, updated_at: T2, katori_ml: 150 });
     expect(toKitchen((await getKitchen(db, USER)) as KitchenRow).katoriMl).toBe(250);
+    db.close();
+  });
+});
+
+// Two devices, both offline, both reading the same nextPosition. There is no
+// UNIQUE(user_id, log_date, position) — a naive one would break the resolver
+// split's `position + N` bump — so after sync the day genuinely holds two rows
+// at the same position. What must not happen is the two devices rendering that
+// day in different orders: nothing is lost, but it reads as loss.
+describe('entries ordering is total, not just by position', () => {
+  it('two rows at the same position order identically every time', async () => {
+    const db = await openTestDb();
+    // deviceB's line was typed a minute later but landed on the same position
+    await insertEntry(db, entry({ id: 'device-b', position: 1, raw_text: 'dal', created_at: T2 }));
+    await insertEntry(db, entry({ id: 'device-a', position: 1, raw_text: 'roti', created_at: T1 }));
+    await insertEntry(db, entry({ id: 'first', position: 0, raw_text: 'chai', created_at: T0 }));
+
+    const texts = (await listDay(db, USER, '2026-07-10')).map((r) => r.raw_text);
+    expect(texts).toEqual(['chai', 'roti', 'dal']); // earlier created_at wins the tie
+    // and it is stable — the same query cannot come back the other way round
+    expect((await listDay(db, USER, '2026-07-10')).map((r) => r.id)).toEqual([
+      'first',
+      'device-a',
+      'device-b',
+    ]);
+    db.close();
+  });
+
+  it('identical timestamps still tie-break, by id', async () => {
+    const db = await openTestDb();
+    await insertEntry(db, entry({ id: 'bbb', position: 0, raw_text: 'second', created_at: T0 }));
+    await insertEntry(db, entry({ id: 'aaa', position: 0, raw_text: 'first', created_at: T0 }));
+    expect((await listDay(db, USER, '2026-07-10')).map((r) => r.id)).toEqual(['aaa', 'bbb']);
+    db.close();
+  });
+
+  it('the export bundle uses the same total order', async () => {
+    const db = await openTestDb();
+    await insertEntry(db, entry({ id: 'b', position: 0, created_at: T2, raw_text: 'later' }));
+    await insertEntry(db, entry({ id: 'a', position: 0, created_at: T0, raw_text: 'earlier' }));
+    expect((await listAllEntries(db, USER)).map((r) => r.raw_text)).toEqual(['earlier', 'later']);
     db.close();
   });
 });

@@ -162,6 +162,14 @@ const MIGRATIONS: readonly string[][] = [
     // 20260728000001. Null = the two coincide.
     `ALTER TABLE dishes ADD COLUMN serving_g REAL`,
   ],
+  [
+    // v3 — resolution_cache.last_hit_at. The mirror had no recency signal and
+    // no bound, so it grew for the life of the install (audit). Eviction needs
+    // to know what is actually being used, not just what was written: a phrase
+    // typed once in March should go before "2 roti".
+    `ALTER TABLE resolution_cache ADD COLUMN last_hit_at TEXT`,
+    `CREATE INDEX resolution_cache_evict ON resolution_cache (hit_count, last_hit_at)`,
+  ],
 ];
 
 export async function migrate(adapter: SqlAdapter): Promise<void> {

@@ -49,6 +49,20 @@ export async function insertEntry(adapter: SqlAdapter, row: EntryRow): Promise<v
   );
 }
 
+/**
+ * The day, in the order the journal renders it.
+ *
+ * `position` alone is not a total order. Two devices logging offline both read
+ * the same `nextPosition` and converge on the same number after sync (audit:
+ * there is no UNIQUE(user_id, log_date, position), and a naive one would break
+ * the split's `position + N` bump). With a tie, SQLite is free to return either
+ * row first — so the same journal could read in a different order on the phone
+ * than on the iPad, which looks like data loss even though nothing is lost.
+ *
+ * created_at then id breaks every tie the same way on every device: the earlier
+ * line stays above, and identical timestamps fall back to the UUID, which is
+ * arbitrary but identical everywhere.
+ */
 export async function listDay(
   adapter: SqlAdapter,
   userId: string,
@@ -57,7 +71,7 @@ export async function listDay(
   return adapter.all<EntryRow>(
     `SELECT * FROM entries
      WHERE user_id = ? AND log_date = ? AND deleted_at IS NULL
-     ORDER BY position ASC`,
+     ORDER BY position ASC, created_at ASC, id ASC`,
     [userId, logDate],
   );
 }
@@ -126,7 +140,7 @@ export async function listRetryable(adapter: SqlAdapter, userId: string): Promis
   return adapter.all<EntryRow>(
     `SELECT * FROM entries
      WHERE user_id = ? AND status = 'unresolved' AND retryable = 1 AND deleted_at IS NULL
-     ORDER BY created_at ASC, position ASC`,
+     ORDER BY created_at ASC, position ASC, id ASC`,
     [userId],
   );
 }
@@ -143,7 +157,7 @@ export async function listResolving(adapter: SqlAdapter, userId: string): Promis
   return adapter.all<EntryRow>(
     `SELECT * FROM entries
      WHERE user_id = ? AND status = 'resolving' AND deleted_at IS NULL
-     ORDER BY created_at ASC, position ASC`,
+     ORDER BY created_at ASC, position ASC, id ASC`,
     [userId],
   );
 }
@@ -265,7 +279,7 @@ export async function listAllEntries(adapter: SqlAdapter, userId: string): Promi
   return adapter.all<EntryRow>(
     `SELECT * FROM entries
      WHERE user_id = ? AND deleted_at IS NULL
-     ORDER BY log_date ASC, position ASC`,
+     ORDER BY log_date ASC, position ASC, created_at ASC, id ASC`,
     [userId],
   );
 }

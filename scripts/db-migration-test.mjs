@@ -241,6 +241,48 @@ try {
     'f',
   );
 
+  // The global cache is served by the Edge Function and marked hit through this
+  // function. It must exist (or every request pays the model again) and must not
+  // be callable by a client role (or anyone can inflate hit_count and hold a
+  // poisoned row past the 90-day eviction).
+  check(
+    'resolver_cache_touch exists',
+    scalar(
+      "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'resolver_cache_touch'",
+    ),
+    1,
+  );
+  for (const role of ['anon', 'authenticated']) {
+    check(
+      `resolver_cache_touch EXECUTE revoked from ${role}`,
+      scalar(
+        `select has_function_privilege('${role}', 'public.resolver_cache_touch(text)', 'execute')`,
+      ),
+      'f',
+    );
+  }
+  // And it does what it says: serving a row bumps the count and the TTL clock.
+  psql(`
+    insert into resolution_cache (normalized_text, intent, resolved_ref, qty, unit, confidence)
+    values ('harness key', 'food', 'dish_dal_toor', 1, 'katori', 0.9)
+    on conflict (normalized_text) do nothing;
+    update resolution_cache set hit_count = 1, last_hit_at = now() - interval '30 days'
+     where normalized_text = 'harness key';
+    select public.resolver_cache_touch('harness key');
+  `);
+  check(
+    'resolver_cache_touch increments hit_count',
+    scalar("select hit_count from resolution_cache where normalized_text = 'harness key'"),
+    2,
+  );
+  check(
+    'resolver_cache_touch refreshes last_hit_at',
+    scalar(
+      "select last_hit_at > now() - interval '1 minute' from resolution_cache where normalized_text = 'harness key'",
+    ),
+    't',
+  );
+
   // entries CHECK constraints were added and then VALIDATEd separately so the
   // lock stays brief; both halves have to have landed.
   check(
