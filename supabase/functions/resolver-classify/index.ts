@@ -237,9 +237,14 @@ Deno.serve(async (req) => {
   // Server-authoritative Plus (plan B2). A spoofed client flag grants nothing
   // that costs money: this reads the entitlements table with the service role
   // and is the only source of truth for Plus-gated resolution. Custom-dish
-  // refs (Phase 5) will only be offered to the model / accepted when isPlus.
+  // refs (Phase 5) will also only be offered to the model / accepted when isPlus.
+  //
+  // Audit C3: this was computed and then discarded (`void isPlus`) while the
+  // budget was a single shared daily fuse — so a flood of free throwaway
+  // accounts could exhaust the day's ceiling and 429 every paying subscriber.
+  // It now selects the budget pool (migration ...20260729000001), and Plus draws
+  // from a reserve free traffic cannot reach.
   const isPlus = await callerIsPlus(userData.user.id);
-  void isPlus; // Phase 5 threads this into systemPrompt(catalogue, { isPlus }).
 
   let body: z.infer<typeof BodySchema>;
   try {
@@ -256,6 +261,7 @@ Deno.serve(async (req) => {
     p_user: userData.user.id,
     p_limit: RATE_LIMIT_PER_MINUTE,
     p_window_seconds: 60,
+    p_plus: isPlus,
   });
   if (rateError) return json(500, { error: 'rate check failed' });
   if (!allowed) return json(429, { error: 'rate limited' });
