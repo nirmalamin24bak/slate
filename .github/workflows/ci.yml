@@ -33,6 +33,12 @@ jobs:
       - name: Test (with engine coverage gate)
         run: npx vitest run --coverage --passWithNoTests
 
+      # The committed seed SQL must match what the reviewed json generates —
+      # otherwise a recipe correction lands in the json and never reaches a
+      # database, or worse, hand-edited SQL diverges from the reviewed source.
+      - name: Reference seed is in sync with the reviewed json
+        run: node scripts/seed-reference.mjs --check
+
       # Edge functions are excluded from tsc/eslint (Deno runtime, npm: imports).
       # Typecheck them with Deno so the one path touching keys + PII + the LLM
       # can't ship a type error unreviewed.
@@ -110,6 +116,25 @@ jobs:
         run: supabase db push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      # Reference data (ingredients, dishes, exercises). `supabase db push`
+      # applies migrations only, and a seed file never reaches a remote
+      # project — so before this step production had empty ingredients,
+      # dishes and exercises, and every food line would have failed to
+      # resolve no matter how good the resolver was.
+      #
+      # All three files are idempotent upserts and are applied in name order,
+      # inside a single transaction with ON_ERROR_STOP, so a bad file leaves
+      # the tables as they were. Requires the SUPABASE_DB_URL secret (Project
+      # Settings → Database → Connection string, session pooler).
+      - name: Apply reference seed
+        run: |
+          for f in supabase/seed/0*.sql; do
+            echo "applying $f"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$f"
+          done
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
       - name: Deploy edge functions
         run: |

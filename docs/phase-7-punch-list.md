@@ -130,16 +130,20 @@ These are ordered by what actually decides the schedule.
    Nirmal owns it and it is not delegable to a model. Resolver accuracy,
    `unresolved_rate`, and day-7 retention are all capped by this number. At 50 dishes a real
    user in Vadodara hits `unresolved` inside their first few lines. This is the schedule.
-2. **Nothing applies the reference data to production — found 28 Jul 2026.** `supabase/seed/`
-   holds a generated, idempotent `01_ingredients.sql` (549 rows), but no code path applies it:
-   `supabase db push` runs migrations only, and a `seed.sql` is a local-reset artifact that
-   never touches a remote project. There is also **no dish or exercise seed SQL at all** — the
-   50 dishes and 20 exercises exist only as `.draft.json`. So on the current deploy path
-   production would come up with an empty `ingredients`, `dishes`, and `exercises`, and every
-   food line would fail to resolve regardless of how good the resolver is. Needs a generator
-   for `02_dishes.sql` / `03_exercises.sql` and an apply step (a `psql -f` against
-   `SUPABASE_DB_URL` in the deploy job is the straightforward one; the `01_`/`02_` naming
-   already implies an ordered apply). Started but not built — this is the next code task.
+   The machinery around it is now built — see [`dish-table-workflow.md`](dish-table-workflow.md):
+   a dish enters only with a declared kcal band, checked through the real engine, and every
+   structural failure (bad ref, duplicate alias, double-listed ingredient, undecided serving
+   weight) fails before review. Review time goes to the numbers.
+2. **Reference data now has a deploy path — built 28 Jul 2026, one secret and one dry run
+   short of done.** The gap: `supabase db push` applies migrations only, a seed file never
+   reaches a remote project, and there was no dish or exercise seed SQL at all — production
+   would have come up with empty `ingredients`, `dishes` and `exercises`, and every food line
+   would have failed regardless of the resolver. Now: `scripts/seed-reference.mjs` generates
+   `02_dishes.sql` and `03_exercises.sql` from the reviewed json, CI fails if the committed SQL
+   drifts from it, and the deploy job applies all three files in order (`psql
+--single-transaction -v ON_ERROR_STOP=1`). **Still needed from you:** the `SUPABASE_DB_URL`
+   repo secret, and one apply against a branch DB — nobody has run 02/03 against a live
+   Postgres.
 3. **The resolver has never run live.** `RESOLVER_PROVIDER_API_KEY` is empty,
    `resolver-classify` is not deployed, and the Phase-2 gate (≥90% intent accuracy,
    `unresolved_rate` < 5%, zero confident-wrong-ref) has never been measured. Separately,
