@@ -48,8 +48,12 @@ requires:
 
 ```
 $env:SUPABASE_DB_URL = (Read-Host 'paste the pooler URI')   # Read-Host keeps it out of history
-.\scripts\psql.ps1 -c "select current_user, version()"
+.\scripts\psql.ps1 "select current_user, version()"
 ```
+
+The SQL is a plain positional argument — there is no `-c`. It goes to psql over
+stdin because PowerShell 5.1 mangles anything handed to `docker.exe`: spaces split one
+argument into several and backslashes vanish, so `-c "<sql>"` ran a silently truncated query.
 
 A wrong password answers `FATAL: password authentication failed for user "postgres"` — note
 the pooler reports the underlying role, not `postgres.<ref>`, so that message does not mean the
@@ -113,13 +117,14 @@ supabase db push --db-url "<branch url>"
 
 # then, with $env:SUPABASE_DB_URL set to the BRANCH url (not production):
 foreach ($f in Get-ChildItem supabase/seed/0*.sql) {
-  .\scripts\psql.ps1 -v ON_ERROR_STOP=1 --single-transaction -f "supabase/seed/$($f.Name)"
+  .\scripts\psql.ps1 -File "supabase/seed/$($f.Name)" -SingleTransaction
 }
-.\scripts\psql.ps1 -c "select
-    (select count(*) from ingredients)       as ingredients,       -- expect 549
-    (select count(*) from dishes)            as dishes,            -- expect 50
-    (select count(*) from dish_ingredients)  as dish_ingredients,  -- expect 141
-    (select count(*) from exercises)         as exercises"         -- expect 20
+.\scripts\psql.ps1 "select
+    (select count(*) from ingredients)       as ingredients,
+    (select count(*) from dishes)            as dishes,
+    (select count(*) from dish_ingredients)  as dish_ingredients,
+    (select count(*) from exercises)         as exercises"
+# expect 549, 50, 141, 20
 ```
 
 **0.4 [eng, after 0.1–0.3] Merge PR #4.** Only then. The merge is what triggers the deploy.
