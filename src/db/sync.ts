@@ -65,6 +65,19 @@ export interface RemoteDb {
   ): Promise<Record<string, SqlValue>[]>;
 }
 
+/**
+ * Rows per push. Must not exceed the server's sync_guard limit (migration
+ * ...20260729000003); it is the same number on purpose, so the two move
+ * together and the client never sends what the server will refuse.
+ */
+export const SYNC_BATCH_ROWS = 500;
+
+function chunk<T>(rows: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
+  return out;
+}
+
 /** Local-only columns that must never reach Postgres. */
 function stripLocal<T extends { dirty: number }>(
   row: T,
@@ -96,27 +109,35 @@ export async function pushDirty(
   // safety: a crash after the upsert but before the mark leaves the row dirty
   // and re-pushes it (the server upsert is idempotent), and an edit that races
   // in between bumps updated_at so the guarded mark skips it — no lost write.
+  // One batch at a time, because the server refuses an oversized payload
+  // (sync_guard, migration ...20260729000003 — an unbounded jsonb array was a
+  // free denial-of-service). A device returning from a long offline stretch can
+  // legitimately hold more than one batch of dirty rows, and without chunking
+  // that push would raise forever and the journal would never reach the server.
+  //
+  // Each chunk is marked synced before the next is sent, so an interrupted push
+  // keeps the ground it gained and the remainder rides the next tick.
   const entries = (await listDirtyEntries(adapter)).filter(owns);
-  if (entries.length > 0) {
+  for (const batch of chunk(entries, SYNC_BATCH_ROWS)) {
     await remote.upsert(
       'entries',
-      entries.map((e: EntryRow) => stripLocal(e, ['retryable'])),
+      batch.map((e: EntryRow) => stripLocal(e, ['retryable'])),
     );
     await markEntriesSynced(
       adapter,
-      entries.map((e) => ({ id: e.id, updated_at: e.updated_at })),
+      batch.map((e) => ({ id: e.id, updated_at: e.updated_at })),
     );
   }
 
   const weights = (await listDirtyWeights(adapter)).filter(owns);
-  if (weights.length > 0) {
+  for (const batch of chunk(weights, SYNC_BATCH_ROWS)) {
     await remote.upsert(
       'weights',
-      weights.map((w: WeightRow) => stripLocal(w)),
+      batch.map((w: WeightRow) => stripLocal(w)),
     );
     await markWeightsSynced(
       adapter,
-      weights.map((w) => ({ id: w.id, updated_at: w.updated_at })),
+      batch.map((w) => ({ id: w.id, updated_at: w.updated_at })),
     );
   }
 

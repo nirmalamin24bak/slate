@@ -54,6 +54,7 @@ import {
   pullReference,
   pullUserData,
   pushDirty,
+  SYNC_BATCH_ROWS,
   type RemoteDb,
   type SyncCursor,
 } from './sync';
@@ -1257,5 +1258,67 @@ describe('sync: keyset pagination', () => {
 
   it('has no cursor for an empty page', () => {
     expect(cursorOf([], 'id')).toBeNull();
+  });
+});
+
+// The server refuses an oversized sync payload (sync_guard, migration
+// ...20260729000003). A device back from a long offline stretch can hold more
+// dirty rows than one batch, so the client has to chunk — otherwise that push
+// raises forever and the journal never reaches the server.
+describe('sync: push batching', () => {
+  /** Records the size of every entries payload it is handed. */
+  function recordingRemote(): RemoteDb & { sizes: number[]; rows: number } {
+    const state = { sizes: [] as number[], rows: 0 };
+    return {
+      ...state,
+      get sizes() {
+        return state.sizes;
+      },
+      get rows() {
+        return state.rows;
+      },
+      async upsert(table, rows) {
+        if (table === 'entries') {
+          state.sizes.push(rows.length);
+          state.rows += rows.length;
+        }
+      },
+      async fetchAll() {
+        return [];
+      },
+      async fetchOwned() {
+        return [];
+      },
+    };
+  }
+
+  it('splits a backlog larger than one batch, and marks each chunk clean', async () => {
+    const db = await openTestDb();
+    await ensureUserRows(db, USER, T0);
+    const total = SYNC_BATCH_ROWS + 7;
+    for (let i = 0; i < total; i++) {
+      await insertEntry(db, entry({ id: `e${String(i).padStart(4, '0')}`, position: i }));
+    }
+
+    const remote = recordingRemote();
+    await pushDirty(db, remote, USER);
+
+    expect(remote.sizes).toEqual([SYNC_BATCH_ROWS, 7]); // chunked, not one push
+    expect(remote.rows).toBe(total); // and nothing dropped between chunks
+    // A chunk that landed must not be pushed again.
+    expect(await listDirtyEntries(db)).toHaveLength(0);
+    db.close();
+  });
+
+  it('sends a single batch when the backlog fits', async () => {
+    const db = await openTestDb();
+    await ensureUserRows(db, USER, T0);
+    await insertEntry(db, entry({ id: 'e1' }));
+
+    const remote = recordingRemote();
+    await pushDirty(db, remote, USER);
+
+    expect(remote.sizes).toEqual([1]);
+    db.close();
   });
 });
