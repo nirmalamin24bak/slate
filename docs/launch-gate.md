@@ -46,13 +46,26 @@ nothing.
 
 > **It must be the session pooler string, not the direct one.** Checked 28 Jul 2026:
 > `db.ruynujwntbcgznoiwugl.supabase.co` has **no A record at all** (AAAA only), and GitHub
-> runners are IPv4-only — the direct string cannot connect from CI. The pooler host
-> `aws-0-ap-south-1.pooler.supabase.com` has A records. The pooler username also differs:
+> runners are IPv4-only — the direct string cannot connect from CI.
+>
+> The pooler host for this project, confirmed 29 Jul 2026, is
+> `aws-1-ap-south-1.pooler.supabase.com` — three A records behind a CNAME to an ap-south-1 ELB.
+> Note `aws-1`, not `aws-0`: the prefix is per-project and Supabase's own docs show both, so read
+> it off Project Settings → Database → Connection pooling rather than assuming. Port `5432` is
+> session mode, which is the one to use — `6543` is transaction mode and cannot run the seed's
+> `--single-transaction` multi-statement apply. The pooler username also differs:
 > `postgres.ruynujwntbcgznoiwugl`, not plain `postgres`.
+>
+> Assembled, the secret's value is one line:
+> `postgresql://postgres.ruynujwntbcgznoiwugl:<PASSWORD>@aws-1-ap-south-1.pooler.supabase.com:5432/postgres`
+>
+> If the password contains `@ : / ? # [ ] %` or a space, percent-encode it, or `psql` will parse
+> the string wrongly and fail somewhere unhelpful. `@` is `%40`, `#` is `%23`, `%` is `%25`.
 >
 > The string carries the database password, so it belongs only in the secret store: never in
 > `.env`, never in a commit, never pasted into a chat or an issue. If one ever is, rotate it
 > at Project Settings → Database → Reset database password and set the secret again.
+> (Done once already: the password was exposed on 28 Jul 2026 and rotated the same day.)
 
 **0.3 Dry-run the migrations and the seed.** Half of this is now automated and done:
 

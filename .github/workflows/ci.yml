@@ -169,7 +169,10 @@ jobs:
       # db.<ref>.supabase.co resolves to AAAA only (no IPv4 address at all)
       # unless the IPv4 add-on is bought, and GitHub runners are IPv4-only, so
       # the direct string cannot connect from here. The pooler host
-      # (aws-0-<region>.pooler.supabase.com, user postgres.<ref>) has A records.
+      # (aws-N-<region>.pooler.supabase.com, user postgres.<ref>) has A records
+      # — for this project aws-1-ap-south-1, port 5432 for session mode. Port
+      # 6543 is transaction mode and would reject --single-transaction below.
+      # See docs/launch-gate.md §0.2 for the full string.
       - name: Apply reference seed
         run: |
           set -euo pipefail
@@ -181,7 +184,15 @@ jobs:
             echo 'psql not on the runner — installing postgresql-client'
             sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
           }
-          for f in supabase/seed/0*.sql; do
+          # nullglob so a rename that breaks the pattern fails on the count check
+          # below with a clear message, instead of handing psql the literal glob.
+          shopt -s nullglob
+          seeds=(supabase/seed/0*.sql)
+          if [ "${#seeds[@]}" -eq 0 ]; then
+            echo '::error::No supabase/seed/0*.sql files matched. Reference data was not applied.'
+            exit 1
+          fi
+          for f in "${seeds[@]}"; do
             echo "applying $f"
             psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$f"
           done
