@@ -187,10 +187,12 @@ These are ordered by what actually decides the schedule.
   (GHSA-w5hq-g745-h8pq) reached through the Expo build toolchain. Build-time only, not
   shipped runtime. Fix is a breaking `expo-splash-screen` bump; defer to a coordinated Expo
   SDK upgrade. Do not `npm audit fix --force`.
-- **Migration deploy safety**: `supabase db push` on merge to `main` auto-applies to prod
-  with no dry-run gate and no tested rollback. Before a risky migration, apply to a branch
-  DB first. A migration-test harness in CI is the follow-up (noted in
-  `docs/ops-verification.md` §3).
+- **Migration deploy safety**: the harness this list has been asking for exists —
+  `scripts/db-migration-test.mjs` applies every migration and seed to a throwaway
+  `supabase/postgres` and asserts the resulting schema; CI runs it and the deploy job depends
+  on it. It found a generated-SQL syntax error on its first run. What remains is a rollback
+  path for a migration that is valid but wrong, which is what the backup restore (0.1 in
+  [`launch-gate.md`](launch-gate.md)) covers.
 - **Every open `FLAG(nirmal)` is now collected in [`founder-rulings.md`](founder-rulings.md)**
   with the value the code carries today, the argument, and the exact edit that applies a
   ruling — grouped into the two that gate launch (resolver provider's DPDP terms, the

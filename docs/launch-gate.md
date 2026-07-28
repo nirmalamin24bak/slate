@@ -40,9 +40,22 @@ gh secret list
 `SUPABASE_DB_URL` is new: it applies the reference seed (ingredients, dishes, exercises).
 Until it exists, production has no food table and every line resolves to nothing.
 
-**0.3 [eng] Dry-run the migrations and the seed against a branch DB.** Nobody has applied
-`02_dishes.sql` / `03_exercises.sql` to a real Postgres. `supabase db push` on merge is
-otherwise the first time this SQL meets a live schema.
+**0.3 Dry-run the migrations and the seed.** Half of this is now automated and done:
+
+```
+node scripts/db-migration-test.mjs
+```
+
+spins a throwaway `supabase/postgres`, applies all 19 migrations and all three seed files in
+order, applies the seeds a second time to prove idempotency, and asserts row counts, RLS on
+every table, the reaper's revoked EXECUTE, and the validated `entries` constraints. It passes,
+and CI runs it on every change under `supabase/`. Its first run caught a syntax error in
+generated seed SQL that would have failed the production deploy after the schema had already
+changed.
+
+What that does **not** prove is anything about _your_ project: its current schema drift, its
+extensions, its data. **[NE]** Still worth one apply against a branch DB before the first
+production run:
 
 ```
 supabase branches create prelaunch-check     # or a scratch project
@@ -209,7 +222,8 @@ should be settled before the listing is final.
 - `uuid <11.1.1` moderate via `xcode` → `@expo/config-plugins`: build-time, never shipped.
   Fix is a breaking `expo-splash-screen` bump; defer to a coordinated Expo SDK upgrade. Do not
   run `npm audit fix --force`.
-- Migration deploy safety: `supabase db push` on merge auto-applies with no dry-run gate and no
-  tested rollback. 0.3 is the manual substitute; a migration-test harness in CI is the
-  follow-up.
+- Migration deploy safety: `supabase db push` on merge auto-applies with no tested rollback.
+  The CI harness (0.3) now proves the SQL is correct and idempotent before it runs; a rollback
+  path for a migration that is _valid but wrong_ is still missing, which is what the backup in
+  0.1 is for.
 - Seed filenames still say `.draft` — deliberate, until the eval set is corrected (1.2).

@@ -68,7 +68,11 @@ select has_function_privilege('authenticated', 'public.reap_resolver_state()', '
 
 ## 3. Migration deploy safety (audit, tracked — not a blocker for these two items)
 
-Separate but related: `supabase db push` on merge to `main` (ci.yml) auto-applies migrations to prod with no dry-run gate and no tested rollback, and CI never runs the SQL against a populated DB. Before a risky migration, run `supabase db diff` / apply it to a branch DB first. A proper migration-test harness in CI is the follow-up; noted here so it isn't forgotten.
+Separate but related: `supabase db push` on merge to `main` (ci.yml) auto-applies migrations to prod with no tested rollback. Before a risky migration, run `supabase db diff` / apply it to a branch DB first.
+
+**The harness landed 28 Jul 2026** — `node scripts/db-migration-test.mjs` applies every migration and seed file to a throwaway `supabase/postgres`, re-applies the seeds to prove idempotency, and asserts the schema (row counts, RLS on all twelve tables, the reaper's revoked EXECUTE, validated `entries` constraints). CI runs it on any change under `supabase/`, and the deploy job depends on it. It caught a generated-SQL syntax error on its first run — one that would have failed the production deploy _after_ the schema had already changed.
+
+Two checks on this page are now enforced there as well as here: the reaper `EXECUTE` revoke, and RLS coverage. That does not replace running them against production — the harness proves the migrations produce the right schema, not that production actually received them.
 
 ---
 
