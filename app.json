@@ -43,7 +43,8 @@
         {
           "cameraPermission": "Slate uses the camera to scan barcodes and nutrition labels."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

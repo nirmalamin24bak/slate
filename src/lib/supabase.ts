@@ -1,10 +1,10 @@
 import 'react-native-url-polyfill/auto';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
 import { signinDeferral, track } from './analytics';
 import { env } from './env';
+import { sessionStore } from './secureSession';
 
 // Supabase is truth; expo-sqlite is the on-device read source (spec/04).
 // Region ap-south-1 (Mumbai) — DPDP data residency. Confirmed in the
@@ -13,9 +13,14 @@ import { env } from './env';
 // Auth model (MASTER.md, reversed twice, final): anonymous sign-in at
 // install. No login screen exists anywhere. Sign-in is an offer in
 // Settings that upgrades the same auth.users row in place.
+// The session (refresh token included) goes to the Keychain, not to a plaintext
+// file in the app container — see src/lib/secureSession.ts for why that is not a
+// nice-to-have here: with no login and no step-up auth, the refresh token is the
+// entire identity. The store falls back to AsyncStorage where no Keychain exists
+// (web, Expo Go, tests) and migrates any session an older build left behind.
 export const supabase = createClient(env.supabaseUrl, env.supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    storage: sessionStore(),
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
