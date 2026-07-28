@@ -1,6 +1,6 @@
 # Phase 8 — Audit fixes: punch list
 
-Status: **weeks 1 and 2 of the remediation plan are landed; the launch gate in
+Status: **weeks 1–3 of the remediation plan are landed; the launch gate in
 [`phase-7-punch-list.md`](phase-7-punch-list.md) is unchanged.** This phase closes findings from a
 production-readiness audit run on 29 Jul 2026 against the whole tree — 20 migrations, 4 Edge
 Functions, the client, CI/CD. It deliberately did not re-litigate what the phase-7 list already
@@ -12,9 +12,9 @@ and its 16-migration deploy queue is untouched.
 Gate on every commit (husky pre-commit runs typecheck + the full suite):
 
 - `tsc --noEmit` clean · `eslint .` clean
-- `vitest run --coverage` — **610 passed / 2 skipped**, every per-glob threshold holds
+- `vitest run --coverage` — **612 passed / 2 skipped**, every per-glob threshold holds
 - `npm audit --omit=dev --audit-level=high` — 0 high in the tree that ships
-- `node scripts/db-migration-test.mjs` — 20 migrations, 3 seed files, **28 RLS checks**, green
+- `node scripts/db-migration-test.mjs` — 24 migrations, 3 seed files, **63 checks**, green
 
 ---
 
@@ -106,6 +106,48 @@ proving it deployed, it boots, and it still requires auth. `verify_jwt` is decla
 `config.toml` but applied by the platform, and a function silently accepting anonymous callers is the
 worst outcome of a bad deploy rather than the most visible one.
 
+## Week 3 — cost, abuse, and fairness
+
+Four migrations (`...20260729000001`–`4`). Every guard here only fires under attack, which is
+exactly the code that rots unnoticed, so each one is asserted in the harness with a positive control
+beside it.
+
+**`resolver: split the budget by tier, and stop serialising it on one row`** (`4451e1c`)
+One 50,000/day fuse for everybody, and users are free and anonymous: forty throwaway sign-ups at 30
+calls/min sustain 1,200/min and drain the day in under an hour, from one laptop, after which every
+paying subscriber's resolver is dead until 00:00 UTC. Plus now draws from a reserved pool free
+traffic cannot reach — `resolver-classify` was already reading the authoritative entitlement and
+discarding it with `void isPlus`. The counter is also sharded 32 ways: it was a single row taking
+`calls = calls + 1` on every served call, and Postgres serialises writers to a row, so that row was
+the product's throughput ceiling with the lock wait inside the user's latency budget.
+**FLAG(nirmal):** 40,000 free + 20,000 Plus are guesses exactly as 50,000 was.
+
+**`resolver: make the cache-poisoning quorum cost something`** (`f486f42`)
+The quorum was "3 distinct users agree", and an account is one `signInAnonymously()` call. Now: 5;
+only accounts older than 24h count; the observations must span an hour; and a **contested phrase —
+distinct refs from eligible accounts — promotes neither**, because disagreement is the signal
+something is being steered and the attacker cannot suppress the honest observations. Contested
+phrases are exposed as a view for an alert to watch once observability exists.
+
+Rejected: requiring the phrase to share a token with the dish name or aliases. It would reject
+`bhaat` → rice, which is the Hinglish mapping the resolver exists to perform. Not solved: an attacker
+who prepares aged accounts and paces them — that needs a signal this schema does not have.
+
+**`sync: bound the push payload, on both sides of the wire`** (`0cbb5df`)
+`sync_upsert_entries(rows jsonb)` took an unbounded array — one RPC carrying five million rows is one
+statement expanding jsonb on the primary while holding locks. `sync_guard` caps all four RPCs at 500
+and raises rather than truncating; entries also caps 500 per user per day. **`pushDirty` now chunks**,
+which is not optional given the cap: a device back from a long offline stretch can hold more than one
+batch, and without chunking that push would raise forever and the journal would never reach the
+server. Residual, stated not hidden: lifetime rows are still uncapped.
+
+**`db: reap abandoned anonymous accounts`** (`595e2af`)
+Every install mints a permanent `auth.users` row and nothing removed it — MAU billing, unbounded
+growth, and (now that the quorum counts account age) a free ripening stock of aged accounts. Deletes
+only: no email, no entries, no weights, no entitlements row even lapsed, and created _and_ last seen
+over 90 days ago. **FLAG(nirmal):** 90 days is a retention line and the privacy notice has no
+retention section; decide the number and the notice together.
+
 ---
 
 ## Blocked, and why
@@ -128,24 +170,22 @@ worst outcome of a bad deploy rather than the most visible one.
    highest-value item on that page and the reason the deploy approval above matters. A backup never
    restored is a hope.
 
-## Still open from the audit, not started
+## Still open from the audit — Week 4
 
-Ranked as the audit ranked them. These are Weeks 3–4 of the remediation plan.
-
-- **C8 observability** — no structured logs in any Edge Function, `report.ts` still carries its
-  `TODO(C1)` where Sentry goes, analytics inert. Every other risk here is undetectable until a bill
-  or a review arrives. Note what is written beside the TODO before wiring: an unfiltered Sentry event
-  carries more of the journal than any analytics event would.
-- **C3 shared budget fuse** — one 50k/day pool for everyone; ~40 free anonymous accounts drain it in
-  under an hour and the resolver is dead for paying users until UTC midnight. `resolver-classify`
-  already computes `isPlus` at `index.ts:238` and then discards it (`void isPlus`); wiring it into a
-  reserved pool is most of the fix.
-- **C2 Sybil-defeatable cache quorum** — the anti-poisoning defence is "3 distinct users agree", and
-  a distinct user costs one `signInAnonymously()`. Layer account age, temporal spread, and a
-  plausibility gate against `supabase/seed/dish-bands.json`, which already exists and is unused here.
-- **C7 unbounded sync payload / no per-user row quota.**
-- **M2** single hot `resolver_global_budget` row · **M4** boot-blocking full reference pull ·
-  **M5** unconditional 30-second sync tick · **M7** Open Food Facts is called with every scanned
-  barcode and is not a named processor in the privacy notice · **M10** Settings links to
-  `https://slate.app/privacy`, a domain we do not own · **M12** the reference corpus is readable by
-  anyone who installs · **M14** no anonymous-account reaper.
+- **C8 observability** — still the top blocker, and the one item Weeks 1–3 could not touch. No
+  structured logs in any Edge Function, `report.ts` still carries its `TODO(C1)` where Sentry goes,
+  analytics inert. Every guard added this phase is invisible without it: nobody would see the free
+  pool draining, a contested phrase appearing, or a payload being refused. Note what is written
+  beside the TODO before wiring — an unfiltered Sentry event carries more of the journal than any
+  analytics event would. Gated on a Sentry DSN and a PostHog host, both founder steps.
+- **Alerting** — budget %, 5xx rate per function, webhook failures, `resolver_contested_phrases`
+  non-empty. All four need C8 first.
+- **M4** boot-blocking full reference pull · **M5** unconditional 30-second sync tick — the two
+  scalability items, and the two that also make the app slower to open.
+- **M7** Open Food Facts is called with every scanned barcode and is not a named processor in the
+  privacy notice · **M10** Settings links to `https://slate.app/privacy`, a domain we do not own.
+  Both are App Store / DPDP gates, both need counsel or a decision rather than code.
+- **M12** the reference corpus is readable by anyone who installs.
+- **C1 candidate filtering** — deferred deliberately. Prompt caching took most of the cost, and at 50
+  dishes the catalogue is small; filtering matters once the dish table reaches 400–600, and doing it
+  before then would tune against the wrong distribution.
