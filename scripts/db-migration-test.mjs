@@ -522,6 +522,206 @@ try {
     4,
   );
 
+  // -------------------------------------------------------------------------
+  // Abuse and cost controls (audit C3/M2, C2, C7, M14). Every one of these is a
+  // guard that only ever fires under attack, which is exactly the kind of code
+  // that rots unnoticed. Assert the behaviour, not the presence of the function.
+  // -------------------------------------------------------------------------
+  console.log('\nAbuse + cost controls:');
+
+  // C3/M2 — the budget is split by tier and sharded. A free-tier flood must not
+  // touch the Plus pool.
+  psql(`delete from resolver_budget; delete from resolver_rate_limits;`);
+  psql(`
+    insert into resolver_budget (day, pool, bucket, calls)
+    values (current_date, 'free', 0, 40000);
+  `);
+  check(
+    'a full free pool refuses a free caller',
+    scalar(`select resolver_rate_check('${USER_A}', 30, 60, false)`),
+    'f',
+  );
+  check(
+    'a full free pool still serves a Plus caller',
+    scalar(`select resolver_rate_check('${USER_B}', 30, 60, true)`),
+    't',
+  );
+  check(
+    'the Plus call was charged to the plus pool, not free',
+    scalar(`select coalesce(sum(calls),0) from resolver_budget where pool = 'plus'`),
+    1,
+  );
+  // Sharding: distinct users must not all land on one row, or the lock
+  // contention this migration exists to remove is still there.
+  psql(`delete from resolver_budget; delete from resolver_rate_limits;`);
+  check(
+    'the counter shards across buckets',
+    scalar(`
+      select count(distinct abs(hashtext(u::text)) % 32) > 4
+      from (select gen_random_uuid() as u from generate_series(1, 40)) s`),
+    't',
+  );
+  // The 3-arg version must be gone, or a stale caller silently charges nothing.
+  check(
+    'the unsharded 3-arg resolver_rate_check is dropped',
+    scalar(`
+      select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = 'resolver_rate_check'
+        and pg_get_function_identity_arguments(p.oid) = 'uuid, integer, integer'`),
+    0,
+  );
+
+  // C2 — quorum hardening. Three probes, each isolating one new rule.
+  psql(`delete from resolution_cache_pending; delete from resolution_cache;`);
+  // Five FRESH accounts agreeing in one burst: the Sybil shape. Must not promote.
+  psql(`
+    insert into auth.users (id, created_at)
+    select gen_random_uuid(), now() from generate_series(1, 5);
+    insert into resolution_cache_pending
+      (normalized_text, resolved_ref, intent, qty, unit, confidence, user_id, observed_at)
+    select 'sybil chai', 'dish_dal_toor', 'food', 1, 'katori', 0.9, id, now()
+    from auth.users where created_at > now() - interval '1 minute';
+  `);
+  psql(`select resolver_cache_write(
+          (select id::text from auth.users where created_at > now() - interval '1 minute' limit 1),
+          'sybil chai', 'food', 'dish_dal_toor', 1, 'katori', 0.9);`);
+  check(
+    'five brand-new accounts cannot promote a phrase (age rule)',
+    scalar(`select count(*) from resolution_cache where normalized_text = 'sybil chai'`),
+    0,
+  );
+  // Five AGED accounts agreeing, but all within a minute: still the burst shape.
+  psql(`
+    delete from auth.users where created_at > now() - interval '1 minute';
+    delete from resolution_cache_pending;
+    insert into auth.users (id, created_at)
+    select gen_random_uuid(), now() - interval '30 days' from generate_series(1, 5);
+    insert into resolution_cache_pending
+      (normalized_text, resolved_ref, intent, qty, unit, confidence, user_id, observed_at)
+    select 'burst chai', 'dish_dal_toor', 'food', 1, 'katori', 0.9, id, now()
+    from auth.users where created_at < now() - interval '29 days' and email is null;
+  `);
+  psql(`select resolver_cache_write(
+          (select id::text from auth.users where created_at < now() - interval '29 days' limit 1),
+          'burst chai', 'food', 'dish_dal_toor', 1, 'katori', 0.9);`);
+  check(
+    'aged accounts firing in one burst cannot promote (spread rule)',
+    scalar(`select count(*) from resolution_cache where normalized_text = 'burst chai'`),
+    0,
+  );
+  // Same five, spread over a day: the honest shape. Must promote.
+  psql(`
+    update resolution_cache_pending
+       set observed_at = now() - (interval '1 hour' * (abs(hashtext(user_id::text)) % 24))
+     where normalized_text = 'burst chai';
+  `);
+  psql(`select resolver_cache_write(
+          (select id::text from auth.users where created_at < now() - interval '29 days' limit 1),
+          'burst chai', 'food', 'dish_dal_toor', 1, 'katori', 0.9);`);
+  check(
+    'control: aged accounts spread over time DO promote',
+    scalar(`select count(*) from resolution_cache where normalized_text = 'burst chai'`),
+    1,
+  );
+  // Contested: two refs for one phrase, from aged well-spread accounts. Neither.
+  psql(`
+    delete from resolution_cache; delete from resolution_cache_pending;
+    insert into resolution_cache_pending
+      (normalized_text, resolved_ref, intent, qty, unit, confidence, user_id, observed_at)
+    select 'contested', case when row_number() over () > 2 then 'dish_roti' else 'dish_dal_toor' end,
+           'food', 1, 'katori', 0.9, id, now() - (interval '3 hours' * row_number() over ())
+    from auth.users where created_at < now() - interval '29 days' and email is null;
+  `);
+  psql(`select resolver_cache_write(
+          (select id::text from auth.users where created_at < now() - interval '29 days' limit 1),
+          'contested', 'food', 'dish_roti', 1, 'katori', 0.9);`);
+  check(
+    'a contested phrase promotes neither ref',
+    scalar(`select count(*) from resolution_cache where normalized_text = 'contested'`),
+    0,
+  );
+  check(
+    'and it surfaces in the contested-phrases view',
+    scalar(`select count(*) from resolver_contested_phrases where normalized_text = 'contested'`),
+    1,
+  );
+
+  // C7 — payload bounds. The oversized push must RAISE, not truncate.
+  check(
+    'a 501-row sync payload is refused',
+    deniedAs(
+      USER_A,
+      `select sync_upsert_entries((
+         select jsonb_agg(jsonb_build_object(
+           'id', gen_random_uuid(), 'user_id', '${USER_A}', 'log_date', '2026-07-11',
+           'position', i, 'raw_text', 'x', 'intent', 'food', 'status', 'resolved',
+           'calc_version', 'v1', 'is_included', false, 'was_calibrated', false,
+           'created_at', now(), 'updated_at', now()))
+         from generate_series(1, 501) i));`,
+    ),
+    true,
+  );
+  check(
+    'control: a 2-row sync payload is accepted',
+    deniedAs(
+      USER_A,
+      `select sync_upsert_entries((
+         select jsonb_agg(jsonb_build_object(
+           'id', gen_random_uuid(), 'user_id', '${USER_A}', 'log_date', '2026-07-11',
+           'position', i, 'raw_text', 'x', 'intent', 'food', 'status', 'resolved',
+           'calc_version', 'v1', 'is_included', false, 'was_calibrated', false,
+           'created_at', now(), 'updated_at', now()))
+         from generate_series(1, 2) i));`,
+    ),
+    false,
+  );
+
+  // M14 — the anonymous reaper keeps anyone who matters.
+  psql(`
+    delete from auth.users
+     where email is null and created_at < now() - interval '29 days'
+       and id not in ('${USER_A}', '${USER_B}');
+    insert into auth.users (id, email, created_at, last_sign_in_at) values
+      ('33333333-3333-3333-3333-333333333333', null,          now() - interval '200 days', now() - interval '200 days'),
+      ('44444444-4444-4444-4444-444444444444', 'a@b.example', now() - interval '200 days', now() - interval '200 days'),
+      ('55555555-5555-5555-5555-555555555555', null,          now() - interval '200 days', now() - interval '1 day'),
+      ('66666666-6666-6666-6666-666666666666', null,          now() - interval '200 days', now() - interval '200 days')
+    on conflict do nothing;
+    insert into entitlements (user_id, active)
+    values ('66666666-6666-6666-6666-666666666666', false) on conflict do nothing;
+  `);
+  check(
+    'the reaper deletes exactly the abandoned anonymous user',
+    scalar(`select public.reap_anonymous_accounts()`),
+    1,
+  );
+  check(
+    'it keeps the signed-in, the recently-active, and the ex-subscriber',
+    scalar(`
+      select count(*) from auth.users where id in (
+        '44444444-4444-4444-4444-444444444444',
+        '55555555-5555-5555-5555-555555555555',
+        '66666666-6666-6666-6666-666666666666')`),
+    3,
+  );
+  check(
+    'it keeps a user who has logged something',
+    scalar(`select count(*) from auth.users where id = '${USER_A}'`),
+    1,
+  );
+  check(
+    'the reap left an audit row',
+    scalar(`select count(*) from account_deletions where source like 'reaper:%'`),
+    1,
+  );
+  check(
+    'both reap jobs are scheduled',
+    scalar(
+      `select count(*) from cron.job where jobname in ('reap-resolver-state','reap-anonymous-accounts')`,
+    ),
+    2,
+  );
+
   console.log('');
   if (failures.length > 0) {
     console.error(`✗ ${failures.length} check(s) failed: ${failures.join(', ')}`);
