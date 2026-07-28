@@ -58,7 +58,15 @@ Deno.serve(async (req) => {
 
   // Audit BEFORE the delete: the append-only row must exist even if the delete
   // then fails, and it survives the cascade (no FK to auth.users).
-  await service.from('account_deletions').insert({ user_id: userData.user.id, source: 'edge' });
+  //
+  // Audit M15: the insert's error used to be discarded and the hard delete ran
+  // regardless, so a failed audit produced an irreversible erasure with no
+  // evidence — exactly what migration ...0012 exists to prevent. Refuse instead.
+  // The user can retry; an unlogged delete cannot be undone or evidenced.
+  const { error: auditError } = await service
+    .from('account_deletions')
+    .insert({ user_id: userData.user.id, source: 'edge' });
+  if (auditError) return json(500, { error: 'delete failed' });
 
   // The uid comes from the verified token, never the body — a caller can only
   // delete themselves.
