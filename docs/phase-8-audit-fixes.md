@@ -1,6 +1,6 @@
 # Phase 8 — Audit fixes: punch list
 
-Status: **weeks 1–3 of the remediation plan are landed; the launch gate in
+Status: **the whole 30-day remediation plan is landed; the launch gate in
 [`phase-7-punch-list.md`](phase-7-punch-list.md) is unchanged.** This phase closes findings from a
 production-readiness audit run on 29 Jul 2026 against the whole tree — 20 migrations, 4 Edge
 Functions, the client, CI/CD. It deliberately did not re-litigate what the phase-7 list already
@@ -12,9 +12,9 @@ and its 16-migration deploy queue is untouched.
 Gate on every commit (husky pre-commit runs typecheck + the full suite):
 
 - `tsc --noEmit` clean · `eslint .` clean
-- `vitest run --coverage` — **612 passed / 2 skipped**, every per-glob threshold holds
+- `vitest run --coverage` — **630 passed / 2 skipped**, every per-glob threshold holds
 - `npm audit --omit=dev --audit-level=high` — 0 high in the tree that ships
-- `node scripts/db-migration-test.mjs` — 24 migrations, 3 seed files, **63 checks**, green
+- `node scripts/db-migration-test.mjs` — 25 migrations, 3 seed files, **66 checks**, green
 
 ---
 
@@ -170,21 +170,50 @@ retention section; decide the number and the notice together.
    highest-value item on that page and the reason the deploy approval above matters. A backup never
    restored is a hope.
 
-## Still open from the audit — Week 4
+## Week 4 — see it, and stop paying for an idle app
 
-- **C8 observability** — still the top blocker, and the one item Weeks 1–3 could not touch. No
-  structured logs in any Edge Function, `report.ts` still carries its `TODO(C1)` where Sentry goes,
-  analytics inert. Every guard added this phase is invisible without it: nobody would see the free
-  pool draining, a contested phrase appearing, or a payload being refused. Note what is written
-  beside the TODO before wiring — an unfiltered Sentry event carries more of the journal than any
-  analytics event would. Gated on a Sentry DSN and a PostHog host, both founder steps.
-- **Alerting** — budget %, 5xx rate per function, webhook failures, `resolver_contested_phrases`
-  non-empty. All four need C8 first.
-- **M4** boot-blocking full reference pull · **M5** unconditional 30-second sync tick — the two
-  scalability items, and the two that also make the app slower to open.
-- **M7** Open Food Facts is called with every scanned barcode and is not a named processor in the
-  privacy notice · **M10** Settings links to `https://slate.app/privacy`, a domain we do not own.
-  Both are App Store / DPDP gates, both need counsel or a decision rather than code.
+**`functions: structured logs, so a bad day is visible before the bill is`** (`1592d5a`)
+None of the four functions emitted anything, so every guard added in Weeks 1–3 fired invisibly. One
+JSON line per request from a `done` helper, so the response and the log are produced together and
+cannot drift. `LogFields` is a closed type for the same reason `AnalyticsEvent` is: there is no
+`log(event, arbitraryObject)`, because that signature is how `raw_text` reaches a log aggregator by
+accident. Error messages are classified to a kind, never logged — a provider error can quote the
+prompt back, and the prompt is the user's line.
+
+`resolver-classify` now reports what a call **cost**. The number to watch is `cachedTokens` against
+`inputTokens`: it is the direct health check on the `cache_control` breakpoint from `0dfc281`, and if
+the cached share stops being most of the total then spend has regressed with nothing else looking
+wrong — the exact failure a calls/day ceiling cannot see.
+
+**`app: a real crash boundary, with the journal stripped off every event`** (`3c7eb56`)
+`report.ts` was a `console.error` behind `__DEV__`, so release builds reported nothing. Now inert
+until `EXPO_PUBLIC_SENTRY_DSN` is set, same guarded-require shape as `analytics.ts`. `scrubEvent` is
+an **allow-list**, not a deny-list — the next SDK version can add a field carrying user content, and
+a deny-list would not know to remove it. Breadcrumbs are never collected at all, because the resolver
+POSTs the user's line and a fetch breadcrumb of that call _is_ the journal. Eleven tests, the
+important ones negative.
+
+**`sync: stop paying for a journal that has not changed`** (`3bd8de4`)
+Boot awaited a full download of every reference table, every launch. Now backgrounded and gated on
+`app_config.reference_version`, so an unchanged catalogue costs one small row read. The tick was a
+flat 30s interval running a push plus four paged selects regardless; it now backs off 30s→5m while
+idle and snaps back on any activity. An idle hour costs under 20 polls instead of 120.
+
+**`privacy: name Open Food Facts, and pin the placeholder URLs`** (`a2db7e2`)
+Every scanned barcode that misses our own table goes to a French non-profit with the user's IP, and
+the processors section did not say so. The placeholder guardrail earned itself immediately: the audit
+named two, the first run found **three** — `src/components/Drawer.tsx` puts `slate.app` in front of a
+user's friends via the share sheet.
+
+---
+
+## Still open
+
+- **Alerting** — the logs exist now; nothing watches them. Budget %, 5xx rate per function, webhook
+  `upsert_failed`, and `resolver_contested_phrases` going non-empty are the four worth a page.
+  Needs a destination, which needs the Sentry and PostHog accounts.
+- **Sentry and PostHog remain unconfigured.** Both boundaries are written, tested and inert. Each is
+  one `npm i` and one env var.
 - **M12** the reference corpus is readable by anyone who installs.
 - **C1 candidate filtering** — deferred deliberately. Prompt caching took most of the cost, and at 50
   dishes the catalogue is small; filtering matters once the dish table reaches 400–600, and doing it
