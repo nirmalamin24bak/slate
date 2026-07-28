@@ -91,12 +91,50 @@ jobs:
           fi
           echo 'Secret scan clean.'
 
-  # Deploy migrations + edge functions to production, only after `check` passes
-  # and only on merge to main. Before this, both were manual from a laptop with
-  # no audit trail and no guarantee prod matched main. Requires repo secrets:
-  # SUPABASE_ACCESS_TOKEN (a personal access token) and SUPABASE_PROJECT_REF.
+  # Apply every migration and seed file to a throwaway Supabase Postgres and
+  # assert the result. Before this, `supabase db push` on merge to main was the
+  # first time any of it met a real schema — auto-applied, against production,
+  # with no rollback, and the seed files had never executed at all. The first
+  # run of this job found a syntax error in generated seed SQL that would have
+  # failed the production deploy.
+  db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      # The image is 3 GB. Skip the job when nothing that touches the database
+      # changed — but never skip on main, where the deploy follows.
+      - name: Does this change touch the database?
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
+             | grep -qE '^(supabase/|scripts/(seed|ifct))'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo 'No database changes — skipping the migration harness.'
+          fi
+
+      - name: Migrations + seed against a real Postgres
+        if: steps.scope.outputs.run == 'true'
+        run: node scripts/db-migration-test.mjs
+
+  # Deploy migrations + edge functions to production, only after `check` and the
+  # migration harness pass, and only on merge to main. Before this, both were
+  # manual from a laptop with no audit trail and no guarantee prod matched main.
+  # Requires repo secrets: SUPABASE_ACCESS_TOKEN (a personal access token),
+  # SUPABASE_PROJECT_REF, and SUPABASE_DB_URL (for the reference seed).
   deploy:
-    needs: check
+    needs: [check, db]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:

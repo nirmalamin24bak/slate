@@ -157,14 +157,17 @@ export function dishesToSql(dishes, refMap) {
   for (const d of dishes)
     for (const di of d.ingredients) pairs.push([d.id, refMap[di.ref], di.grams, di.ref]);
 
+  // The ref is kept as a trailing comment: the json says "potato", the table
+  // says IFCT_F006, and a reviewer reading this file needs both. The separator
+  // must go BEFORE the comment — a `-- potato` that swallows the comma turns
+  // the next row into a syntax error, which is exactly what it did.
   const ingredientValues = pairs
     .map(
-      ([dishId, ingredientId, grams, ref]) =>
-        // the ref is kept as a comment: the json says "potato", the table says
-        // IFCT_F006, and a reviewer reading this file needs both.
-        `  (${sqlLit(dishId)}, ${sqlLit(ingredientId)}, ${sqlLit(grams)})  -- ${ref}`,
+      ([dishId, ingredientId, grams, ref], i) =>
+        `  (${sqlLit(dishId)}, ${sqlLit(ingredientId)}, ${sqlLit(grams)})` +
+        `${i < pairs.length - 1 ? ',' : ''}  -- ${ref}`,
     )
-    .join(',\n');
+    .join('\n');
 
   // Wrapped one per line: this file is read by a human reviewing a recipe
   // change, and a 4,000-character line is not reviewable.
