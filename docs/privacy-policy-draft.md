@@ -37,6 +37,7 @@ We use a small number of service providers who process data on our instructions:
 - **Resolver model provider** `[name — pending founder decision]`: the text of a food entry is sent to a language model to identify the food. The contract requires zero retention and no training on our data. If the provider hosts the model outside India, that transfer is disclosed here. `[Counsel: complete once the provider is signed.]`
 - **Analytics processor** `[pending — see docs/analytics-handoff.md]`: if analytics goes live, it will be hosted in India, will never receive the text of your entries, and will be named here first.
 - **Apple and RevenueCat** process subscription purchases. Payment details stay with Apple; we never see them.
+- **Open Food Facts** (openfoodfacts.org, a non-profit database hosted in France): when you scan a barcode that is not already in our own packaged-foods table, that barcode is sent to them to look up the product. They receive the barcode and, unavoidably, your device's IP address. They receive nothing else — not your journal, not your name, not what you did with the result. This is a transfer outside India. `[Counsel: confirm the disclosure wording, and whether the transfer needs anything further under the notified Rules. Engineering alternative if it does — route the lookup through our own Edge Function so only Slate's server address reaches them; see audit M7.]`
 
 We do not sell data to anyone, and no processor may use your data for its own purposes.
 
