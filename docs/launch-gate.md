@@ -13,7 +13,7 @@ item above it exists.
 ## 0. Before anything touches production
 
 **0.1 [NE] Verify the backups you already have.** `docs/ops-verification.md` is entirely
-unchecked, and merging PR #4 auto-applies eleven migrations to the live project. Do this first
+unchecked, and merging PR #4 auto-applies sixteen new migrations to the live project. Do this first
 — the whole page, but the test restore above all. A backup nobody has restored is a hope.
 
 ```
