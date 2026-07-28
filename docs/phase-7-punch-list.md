@@ -52,6 +52,21 @@ floor is now the thinnest margin left.
   crash are recovered on next open rather than sitting dead in the UI (`2e66844`).
 - Loading and error states across the screens; journal line list virtualized and hot-path
   children memoized (`0953bc0`, `a5e09d1`).
+- **A real analytics boundary, and the removal of a free-form event sink** (`2f6dd0d`).
+  `docs/analytics-handoff.md` had required since 10 Jul that one module own the PostHog SDK
+  behind a typed event union, and that a call site able to pass an arbitrary string counts as
+  the boundary having failed. What existed was `reportEvent(name: string, props?: Context)`,
+  and its two call sites were already passing a Supabase auth error message verbatim and the
+  id of the row holding the user's `raw_text`. Nothing had leaked only because the sink was a
+  `console.log` — the absence of a vendor was doing the work the design should have.
+  `src/lib/analytics.ts` now closes it: a discriminated union, no `capture(name, props)`
+  export, every event in the handoff table wired to a real call site, and 51 tests whose most
+  important assertions are negative (no project ref in any payload, no other file imports the
+  SDK, the constructor gets the pinned `ap-south-1` host with `enableSessionReplay: false`).
+  Two things changed shape as a result: `entry_resolved` gained `source`
+  (`cache`/`rules`/`model`), because spec/05 promises a >90% cache hit rate and `model` is the
+  only value that costs money and there was no way to see either; and `reportError`'s context
+  is a closed key set now, so `{ line: raw }` cannot appear at a call site.
 
 **Sync (spec/04)**
 
@@ -165,9 +180,13 @@ These are ordered by what actually decides the schedule.
    would have failed regardless of the resolver. Now: `scripts/seed-reference.mjs` generates
    `02_dishes.sql` and `03_exercises.sql` from the reviewed json, CI fails if the committed SQL
    drifts from it, and the deploy job applies all three files in order (`psql
---single-transaction -v ON_ERROR_STOP=1`). **Still needed from you:** the `SUPABASE_DB_URL`
-   repo secret, and one apply against a branch DB — nobody has run 02/03 against a live
-   Postgres.
+--single-transaction -v ON_ERROR_STOP=1`). **Update 29 Jul:** all three repo secrets are set
+   and the pooler string is verified reachable — `aws-1-ap-south-1.pooler.supabase.com` (note
+   `aws-1`, not `aws-0`) answers on IPv4, and the connection was proved with
+   `scripts/psql.ps1`, which runs psql in Docker because the dev machine has none.
+   **Still needed from you:** one apply against a branch DB. Nobody has run 02/03 against a
+   live Postgres, and the harness only proves they work against a _clean_ schema — not against
+   whatever drift your project already carries.
 3. **The resolver has never run live.** `RESOLVER_PROVIDER_API_KEY` is empty,
    `resolver-classify` is not deployed, and the Phase-2 gate (≥90% intent accuracy,
    `unresolved_rate` < 5%, zero confident-wrong-ref) has never been measured. Separately,
@@ -182,10 +201,21 @@ These are ordered by what actually decides the schedule.
 5. **RevenueCat key empty.** Products `slate_monthly_199` / `slate_yearly_1499`, the
    webhook, and `Purchases.logIn(supabaseUserId)` are all coded, but no purchase has ever
    been made.
-6. **PostHog key empty**, and `src/lib/report.ts` still carries the two `TODO(C1)` capture
-   sites. PR #2 is an unmerged draft. Consequence: the week-8 `unresolved_rate` and
-   resolver-p95 dashboard does not exist, so the only question that matters after TestFlight
-   — did anyone log on day 7 — is currently unanswerable.
+6. **PostHog key empty and no self-hosted host exists yet.** The code half is now done —
+   `src/lib/analytics.ts` is the boundary, every event in the handoff table fires, 51 tests
+   guard it (see below). What is missing is a PostHog running in `ap-south-1` to point
+   `EXPO_PUBLIC_POSTHOG_HOST` at, the processor terms, and `npm i posthog-react-native`.
+   Until the host exists, analytics is inert by design. Consequence unchanged in practice:
+   the week-8 `unresolved_rate` and resolver-p95 dashboard has no data yet, so the only
+   question that matters after TestFlight — did anyone log on day 7 — is still
+   unanswerable. PR #2 (the wizard draft) should be closed, not merged: wizard output
+   enables autocapture and ignores the boundary module.
+
+   **Sentry is separately still nothing.** `src/lib/report.ts` keeps its `TODO(C1)`. Note
+   what is written beside it before wiring: an unfiltered Sentry event carries more of the
+   journal than any analytics event would, so `beforeSend` must drop the request body and
+   strip breadcrumbs, and `sendDefaultPii` stays false.
+
 7. **Privacy policy unpublished** (`docs/privacy-policy-draft.md`): counsel review, plus two
    open placeholders — the resolver model-provider name, and the DPDP §11/§12/§13 citations
    against the notified Rules. Grievance officer not yet named.
