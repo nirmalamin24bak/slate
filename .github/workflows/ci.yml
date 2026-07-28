@@ -53,11 +53,21 @@ jobs:
           deno lint --config supabase/functions/deno.json supabase/functions/
         shell: bash
 
-      # Fails on high/critical. Moderates stay visible in the log; the only
-      # current one is uuid<11.1.1 via expo's xcode config plugin — build-time
-      # tooling, never in the shipped bundle (see commit history).
-      - name: Audit
-        run: npm audit --audit-level=high
+      # Blocking gate: the tree that can reach a user's phone. Fails on
+      # high/critical. Moderates stay visible in the log; the only current one
+      # is uuid<11.1.1 via expo's xcode config plugin — build-time tooling,
+      # never in the shipped bundle (see commit history).
+      - name: Audit (production tree)
+        run: npm audit --omit=dev --audit-level=high
+
+      # Informational: the dev tree carries GHSA-mh99-v99m-4gvg
+      # (brace-expansion DoS) through eslint's minimatch@3. There is no fixed
+      # 1.x or 2.x release, and the fixed 5.x line exports a non-callable CJS
+      # object that minimatch@3 cannot use — so it is unfixable here, not
+      # unfixed. It runs on our own lint input, never on user data. Printed
+      # every run so it stays visible, and re-check it on the next eslint major.
+      - name: Audit (dev tree, informational)
+        run: npm audit --audit-level=high || true
 
       # No Supabase key material may ever be committed. JWTs (legacy anon /
       # service keys), sb_secret_ / sb_publishable_ API keys, or a .env file.
