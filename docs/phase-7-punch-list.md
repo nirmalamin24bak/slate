@@ -12,8 +12,9 @@ Gate re-run 2026-07-28 (the branch had sat idle since 13 Jul):
 
 - `tsc --noEmit` clean
 - `eslint .` clean
-- `vitest run --coverage` — **439 passed / 2 skipped**, every per-glob threshold holds
-  (statements 98.01%, branches 89.30%, functions 98.50%, lines 99%)
+- `vitest run --coverage` — **518 passed / 2 skipped**, every per-glob threshold holds
+  (statements 98.01%, branches 89.36%, functions 98.50%, lines 99%)
+- `npm audit --omit=dev --audit-level=high` — 0 high in the tree that ships
 
 **Correction to the first version of this page:** it claimed the code gate was green while
 PR #4's `check` job was in fact red, and had been since the job was added. `deno check` could
