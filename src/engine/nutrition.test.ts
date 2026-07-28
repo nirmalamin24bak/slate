@@ -31,6 +31,7 @@ const poha: Dish = {
   defaultQty: 1,
   isHomeCookable: true,
   cookingFatMl: 5,
+  servingG: null,
   ingredients: [
     { ingredient: rice, grams: 60 },
     { ingredient: oil, grams: 5 },

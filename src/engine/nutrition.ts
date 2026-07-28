@@ -2,7 +2,7 @@
 
 import { OIL_FAT_G_PER_ML, OIL_KCAL_PER_ML } from './constants';
 import type { Dish, Nutrition } from './types';
-import { recipeTotalGrams } from './units';
+import { portionBasisGrams } from './units';
 
 export function zeroNutrition(): Nutrition {
   return { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0, fiberG: 0, sugarG: 0 };
@@ -10,12 +10,14 @@ export function zeroNutrition(): Nutrition {
 
 /**
  * Nutrition of `grams` of the dish, computed from its recipe's IFCT rows.
- * The recipe defines the default portion; other masses scale linearly.
+ * The recipe defines one default portion; other masses scale linearly against
+ * what that portion WEIGHS SERVED (portionBasisGrams), not against the raw
+ * ingredient total — for anything cooked from dry those differ by 3–4×.
  */
 export function sumIngredients(dish: Dish, grams: number): Nutrition {
-  const recipeGrams = recipeTotalGrams(dish);
-  if (recipeGrams === 0 || grams === 0) return zeroNutrition();
-  const factor = grams / recipeGrams;
+  const basis = portionBasisGrams(dish);
+  if (basis === 0 || grams === 0) return zeroNutrition();
+  const factor = grams / basis;
   return dish.ingredients.reduce((n, di) => {
     const g = di.grams * factor;
     return {

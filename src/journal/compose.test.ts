@@ -30,6 +30,7 @@ const ROTI: Dish = {
   defaultQty: 1,
   isHomeCookable: true,
   cookingFatMl: 2,
+  servingG: null,
   ingredients: [
     {
       grams: 35,

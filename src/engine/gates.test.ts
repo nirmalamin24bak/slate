@@ -49,6 +49,7 @@ function randomCase(rnd: () => number) {
     defaultQty: 1 + Math.floor(rnd() * 3),
     isHomeCookable: rnd() < 0.7,
     cookingFatMl: rnd() < 0.2 ? null : Math.round(rnd() * 200) / 10,
+    servingG: null,
     ingredients: Array.from({ length: 1 + Math.floor(rnd() * 4) }, (_, i) => ({
       grams: 5 + Math.round(rnd() * 3000) / 10,
       ingredient: {

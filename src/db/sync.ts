@@ -229,7 +229,7 @@ export async function pullReference(adapter: SqlAdapter, remote: RemoteDb): Prom
 
   const dishes = await remote.fetchAll(
     'dishes',
-    'id,name,default_unit,default_qty,is_home_cookable,cooking_fat_ml',
+    'id,name,default_unit,default_qty,is_home_cookable,cooking_fat_ml,serving_g',
   );
   const dishIngredients = await remote.fetchAll('dish_ingredients', 'dish_id,ingredient_id,grams');
   await replaceDishes(

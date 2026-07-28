@@ -8,6 +8,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 8,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "rice_flattened",
@@ -30,7 +31,7 @@
         "grams": 8
       }
     ],
-    "notes": "Sweet-leaning Gujarati style with sugar and peanuts; lemon and trace spices omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Poha 45g/katori (home serving) per Nirmal 12 Jul 2026 — 60g read as a heaped plate."
+    "notes": "Sweet-leaning Gujarati style with sugar and peanuts; lemon and trace spices omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Poha 45g/katori (home serving) per Nirmal 12 Jul 2026 — 60g read as a heaped plate. Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_poha_indori",
@@ -41,6 +42,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 11,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "rice_flattened",
@@ -55,7 +57,7 @@
         "grams": 20
       }
     ],
-    "notes": "Topped with ~12g sev, decomposed as besan 8g + frying oil 3g (added to oil total); jeeravan masala omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Topped with ~12g sev, decomposed as besan 8g + frying oil 3g (added to oil total); jeeravan masala omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_roti",
@@ -66,6 +68,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "wheat_flour_whole",
@@ -83,6 +86,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 4,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "lentil_pigeon_toor",
@@ -93,7 +97,7 @@
         "grams": 15
       }
     ],
-    "notes": "Homestyle dal with ghee tadka; 30g raw dal makes one 200ml katori cooked. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Homestyle dal with ghee tadka; 30g raw dal makes one 200ml katori cooked. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_dal_masoor",
@@ -104,6 +108,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 4,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "lentil_red_masoor",
@@ -118,7 +123,7 @@
         "grams": 15
       }
     ],
-    "notes": "30g raw masoor per katori; onion-tomato tadka. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "30g raw masoor per katori; onion-tomato tadka. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_rice_plain",
@@ -129,13 +134,14 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": null,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "rice_raw_milled",
         "grams": 50
       }
     ],
-    "notes": "50g raw rice yields one 200ml katori cooked; no fat."
+    "notes": "50g raw rice yields one 200ml katori cooked; no fat. Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_jeera_rice",
@@ -146,13 +152,14 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 5,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "rice_raw_milled",
         "grams": 50
       }
     ],
-    "notes": "Plain rice tempered with ghee and cumin; cumin trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Plain rice tempered with ghee and cumin; cumin trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_khichdi",
@@ -163,6 +170,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 5,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "rice_raw_milled",
@@ -173,7 +181,7 @@
         "grams": 20
       }
     ],
-    "notes": "Soft rice-moong khichdi with ghee; turmeric trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Soft rice-moong khichdi with ghee; turmeric trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_upma",
@@ -184,6 +192,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 8,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "semolina",
@@ -198,7 +207,7 @@
         "grams": 5
       }
     ],
-    "notes": "Rava upma; mustard seeds and curry leaves trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Rava upma; mustard seeds and curry leaves trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_idli",
@@ -209,6 +218,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "rice_raw_milled",
@@ -230,6 +240,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 5,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "rice_raw_milled",
@@ -251,6 +262,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 4,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "lentil_pigeon_toor",
@@ -273,7 +285,7 @@
         "grams": 5
       }
     ],
-    "notes": "Thin vegetable sambar; drumstick and gourds vary by home, carrot used as stand-in vegetable. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Thin vegetable sambar; drumstick and gourds vary by home, carrot used as stand-in vegetable. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_rajma",
@@ -284,6 +296,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 6,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "kidney_bean_rajma",
@@ -298,7 +311,7 @@
         "grams": 30
       }
     ],
-    "notes": "35g raw rajma per katori of curry with gravy. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "35g raw rajma per katori of curry with gravy. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_chole",
@@ -309,6 +322,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 7,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "chickpea_white",
@@ -323,7 +337,7 @@
         "grams": 30
       }
     ],
-    "notes": "35g raw kabuli chana per katori of curry. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "35g raw kabuli chana per katori of curry. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_palak_paneer",
@@ -334,6 +348,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 6,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "spinach",
@@ -356,7 +371,7 @@
         "grams": 10
       }
     ],
-    "notes": "Homestyle, light cream; restaurant versions carry more fat. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Homestyle, light cream; restaurant versions carry more fat. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_paneer_butter_masala",
@@ -367,6 +382,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 10,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "paneer",
@@ -393,7 +409,7 @@
         "grams": 3
       }
     ],
-    "notes": "Home version; restaurant gravies run 1.5-2x the butter and cream. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Home version; restaurant gravies run 1.5-2x the butter and cream. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_aloo_sabzi_dry",
@@ -404,13 +420,14 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 6,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "potato",
         "grams": 120
       }
     ],
-    "notes": "Dry-fried potato sabzi; turmeric and trace spices omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Dry-fried potato sabzi; turmeric and trace spices omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_bhindi_sabzi",
@@ -421,6 +438,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 8,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "okra",
@@ -431,7 +449,7 @@
         "grams": 15
       }
     ],
-    "notes": "Bhindi absorbs oil; 8ml is a lean home baseline. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Bhindi absorbs oil; 8ml is a lean home baseline. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_curd",
@@ -442,13 +460,14 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "curd",
         "grams": 150
       }
     ],
-    "notes": "Plain curd from toned milk, unsweetened."
+    "notes": "Plain curd from toned milk, unsweetened. serving_g null on purpose: nothing is cooked off or diluted, so the recipe grams ARE the served grams and a larger katori simply holds more curd."
   },
   {
     "id": "dish_egg_boiled",
@@ -459,6 +478,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "egg_hen",
@@ -476,6 +496,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 5,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "egg_hen",
@@ -501,6 +522,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 10,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "chicken_meat",
@@ -515,7 +537,7 @@
         "grams": 40
       }
     ],
-    "notes": "100g raw boneless chicken per katori with gravy; homestyle onion-tomato base. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "100g raw boneless chicken per katori with gravy; homestyle onion-tomato base. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_veg_biryani",
@@ -526,6 +548,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 15,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "rice_raw_milled",
@@ -567,6 +590,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 15,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "rice_raw_milled",
@@ -596,6 +620,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 6,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "wheat_flour_whole",
@@ -613,6 +638,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 8,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "wheat_flour_whole",
@@ -630,6 +656,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 10,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "wheat_flour_whole",
@@ -651,6 +678,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "noodles_instant",
@@ -668,6 +696,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "bread_white",
@@ -685,6 +714,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "banana",
@@ -702,6 +732,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "apple",
@@ -719,6 +750,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "wheat_flour_refined",
@@ -748,6 +780,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "bread_white",
@@ -777,6 +810,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 20,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "bread_white",
@@ -814,6 +848,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 4,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "gram_flour_besan",
@@ -835,6 +870,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 6,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "wheat_flour_whole",
@@ -860,6 +896,7 @@
     "default_qty": 30,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "gram_flour_besan",
@@ -881,6 +918,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "lentil_black_urad",
@@ -898,13 +936,14 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "curd",
         "grams": 50
       }
     ],
-    "notes": "Thin salted chaas, 50g curd diluted to ~200ml; unsweetened."
+    "notes": "Thin salted chaas, 50g curd diluted to ~200ml; unsweetened. Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_chai",
@@ -915,6 +954,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "milk_toned",
@@ -929,7 +969,7 @@
         "grams": 2
       }
     ],
-    "notes": "Nutrition comes from the user's chai calibration at compute time (engine chaiNutrition), NOT this recipe — same '1 chai' is ~5 kcal black or ~90 kcal two-sugars-full-milk. The ingredients here are a reference composition only. is_home_cookable false so it stays out of the day's oil distribution. qty is a cup count."
+    "notes": "Nutrition comes from the user's chai calibration at compute time (engine chaiNutrition), NOT this recipe — same '1 chai' is ~5 kcal black or ~90 kcal two-sugars-full-milk. The ingredients here are a reference composition only. is_home_cookable false so it stays out of the day's oil distribution. qty is a cup count. Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_masala_dosa",
@@ -940,6 +980,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 8,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "rice_raw_milled",
@@ -969,6 +1010,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 8,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "lentil_black_urad",
@@ -986,6 +1028,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 3,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "rice_raw_milled",
@@ -1000,7 +1043,7 @@
         "grams": 20
       }
     ],
-    "notes": "Tempered curd rice; mustard and curry leaves trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Tempered curd rice; mustard and curry leaves trace omitted. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_egg_bhurji",
@@ -1011,6 +1054,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 8,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "egg_hen",
@@ -1025,7 +1069,7 @@
         "grams": 30
       }
     ],
-    "notes": "Two-egg bhurji with onion-tomato masala. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts)."
+    "notes": "Two-egg bhurji with onion-tomato masala. Cooking fat moved out of ingredients into cooking_fat_ml (engine adds it via addOil; keeping both double-counts). Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   },
   {
     "id": "dish_veg_sandwich",
@@ -1036,6 +1080,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 10,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "bread_white",
@@ -1069,6 +1114,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "wheat_flour_whole",
@@ -1090,6 +1136,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "rice_puffed",
@@ -1139,6 +1186,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 5,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "gram_flour_besan",
@@ -1164,6 +1212,7 @@
     "default_qty": 1,
     "is_home_cookable": true,
     "cooking_fat_ml": 12,
+    "serving_g": null,
     "ingredients": [
       {
         "ref": "rice_raw_milled",
@@ -1201,6 +1250,7 @@
     "default_qty": 1,
     "is_home_cookable": false,
     "cooking_fat_ml": null,
+    "serving_g": 200,
     "ingredients": [
       {
         "ref": "curd",
@@ -1211,6 +1261,6 @@
         "grams": 20
       }
     ],
-    "notes": "One ~200ml glass, curd blended with water and sugar; no malai topping."
+    "notes": "One ~200ml glass, curd blended with water and sugar; no malai topping. Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
   }
 ]

@@ -25,6 +25,6 @@ export {
 export { addOil, scale, sumIngredients, zeroNutrition } from './nutrition';
 export { applyPersonalization, clampFatFactor, clampTotalFactor } from './personalization';
 export { parsePersonalization } from './parsePersonalization';
-export { recipeTotalGrams, toGrams } from './units';
+export { portionBasisGrams, recipeTotalGrams, toGrams } from './units';
 export { computeEntry } from './computeEntry';
 export type { ComputeEntryInput } from './computeEntry';

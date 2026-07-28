@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { Dish, Kitchen } from './types';
-import { recipeTotalGrams, toGrams } from './units';
+import { sumIngredients } from './nutrition';
+import { portionBasisGrams, recipeTotalGrams, toGrams } from './units';
 
 // toGrams is the ONLY unit-conversion site in the codebase (CLAUDE.md).
 // It reads kitchen. It is pure. katori → ml → g at 1 g/ml for cooked wet dishes.
@@ -24,6 +25,7 @@ function makeDish(overrides: Partial<Dish> = {}): Dish {
     defaultQty: 1,
     isHomeCookable: true,
     cookingFatMl: 5,
+    servingG: null,
     ingredients: [
       { grams: 30, ingredient: ing('a') },
       { grams: 170, ingredient: ing('b') },
@@ -32,10 +34,10 @@ function makeDish(overrides: Partial<Dish> = {}): Dish {
   };
 }
 
-function ing(id: string) {
+function ing(id: string, kcal100g = 100) {
   return {
     id,
-    kcal100g: 100,
+    kcal100g,
     protein100g: 5,
     carbs100g: 15,
     fat100g: 2,
@@ -117,5 +119,67 @@ describe('toGrams', () => {
 describe('recipeTotalGrams', () => {
   test('sums the ingredient grams of the default portion', () => {
     expect(recipeTotalGrams(makeDish())).toBe(200);
+  });
+});
+
+// The raw-vs-served bug, pinned. Recipes are written on the raw basis — 30 g of
+// toor dal, 50 g of rice — because that is the lineage worth keeping. What
+// arrives in the katori is 200 ml of cooked food. Scaling the second against
+// the first multiplied every wet dish by three or four: one katori of plain
+// rice computed as 713 kcal, one of toor dal as 454, against spec/06's stated
+// 100–150 for a katori of dal. servingG is the served weight; the recipe total
+// is only the fallback for things whose ingredients are already the thing on
+// the plate.
+describe('portionBasisGrams — raw recipe vs served portion', () => {
+  test('falls back to the recipe total when serving weight is not declared', () => {
+    expect(portionBasisGrams(makeDish({ servingG: null }))).toBe(200);
+  });
+
+  test('a declared serving weight wins over the recipe total', () => {
+    const dal = makeDish({
+      servingG: 200,
+      ingredients: [{ grams: 45, ingredient: ing('toor') }],
+    });
+    expect(portionBasisGrams(dal)).toBe(200);
+  });
+
+  test('one katori of a cooked-from-dry dish is one portion, not four', () => {
+    // 45 g of raw ingredients that serve as a 200 ml katori.
+    const dal = makeDish({
+      defaultUnit: 'katori',
+      defaultQty: 1,
+      servingG: 200,
+      cookingFatMl: null,
+      ingredients: [{ grams: 45, ingredient: ing('toor', 335) }],
+    });
+    const grams = toGrams(1, 'katori', dal, kitchen); // 200 g served
+    expect(grams).toBe(200);
+    // 45 g of toor at 335 kcal/100g — the raw basis, unscaled
+    expect(sumIngredients(dal, grams).kcal).toBeCloseTo(150.75, 2);
+  });
+
+  test('a bigger katori still scales the portion up', () => {
+    const dal = makeDish({
+      defaultUnit: 'katori',
+      servingG: 200,
+      ingredients: [{ grams: 45, ingredient: ing('toor', 335) }],
+    });
+    const large = { ...kitchen, katoriMl: 250 };
+    const kcal = sumIngredients(dal, toGrams(1, 'katori', dal, large)).kcal;
+    expect(kcal).toBeCloseTo(150.75 * 1.25, 2); // 250/200
+  });
+
+  test('countable units cancel: a piece is a piece whichever basis is used', () => {
+    const withServing = makeDish({
+      defaultUnit: 'piece',
+      defaultQty: 1,
+      servingG: 30,
+      ingredients: [{ grams: 25, ingredient: ing('atta', 320) }],
+    });
+    const withoutServing = { ...withServing, servingG: null };
+    const a = sumIngredients(withServing, toGrams(2, 'piece', withServing, kitchen)).kcal;
+    const b = sumIngredients(withoutServing, toGrams(2, 'piece', withoutServing, kitchen)).kcal;
+    expect(a).toBeCloseTo(b, 6);
+    expect(a).toBeCloseTo(160, 6); // two rotis of 25 g atta
   });
 });

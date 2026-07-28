@@ -1,5 +1,17 @@
 # Nutrition data verification — founder decision sheet
 
+> **28 Jul 2026 — a bug this sheet's own numbers exposed.** The values below were computed by
+> hand as Σ(ingredient g × per-100g kcal) + fat×9 — the recipe as written. The engine computed
+> something else: it scaled the **served** weight of a katori (200 g) against the **raw**
+> recipe total (45 g for dal), multiplying every wet dish by three or four. One katori of plain
+> rice came out at **713 kcal**, one of toor dal at **454**, against spec/06's stated 100–150
+> for a katori of dal. Fixed by giving dishes a `serving_g` — the served weight of one default
+> portion — and scaling against that (`portionBasisGrams`). Every dish now computes what this
+> sheet said it should: poha 346, chicken curry 317, chicken biryani 663, dhokla 138. The 22
+> katori dishes carry `serving_g: 200`; curd carries `null` on purpose, because nothing is
+> cooked off or diluted. Pinned in `src/engine/units.test.ts` and, per dish, in
+> `test/dish-bands.test.ts`.
+
 Status: **RULED & APPLIED 13 Jul 2026.** Verified against published sources 12 Jul; Nirmal's rulings applied 13 Jul (summary below). A few genuinely-open FLAGs remain (1200-floor location, decoction milk type, surya rounds→minutes) — none block launch. The `.draft.json` filenames are kept for now: the resolver-eval _case set_ is still unverified, so renaming the seed would churn the eval harness mid-flight; rename is a clean follow-up once the eval set is corrected.
 
 ## Rulings applied (13 Jul 2026)

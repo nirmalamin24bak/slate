@@ -62,7 +62,15 @@ export async function replaceDishes(
   await replaceRows(
     adapter,
     'dishes',
-    ['id', 'name', 'default_unit', 'default_qty', 'is_home_cookable', 'cooking_fat_ml'],
+    [
+      'id',
+      'name',
+      'default_unit',
+      'default_qty',
+      'is_home_cookable',
+      'cooking_fat_ml',
+      'serving_g',
+    ],
     dishes,
   );
   await replaceRows(
@@ -117,7 +125,7 @@ export async function loadCatalogue(adapter: SqlAdapter): Promise<Catalogue> {
 
 export async function loadDish(adapter: SqlAdapter, dishId: string): Promise<Dish | null> {
   const dish = await adapter.get<DishRowJoined>(
-    'SELECT id, default_unit, default_qty, is_home_cookable, cooking_fat_ml FROM dishes WHERE id = ?',
+    'SELECT id, default_unit, default_qty, is_home_cookable, cooking_fat_ml, serving_g FROM dishes WHERE id = ?',
     [dishId],
   );
   if (!dish) return null;

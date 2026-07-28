@@ -155,6 +155,13 @@ const MIGRATIONS: readonly string[][] = [
       value TEXT NOT NULL
     )`,
   ],
+  [
+    // v2 — dishes.serving_g. The served weight of one default portion, which
+    // is NOT the recipe's raw-ingredient total for anything cooked from dry
+    // (50 g of rice becomes a 200 ml katori). Mirrors migration
+    // 20260728000001. Null = the two coincide.
+    `ALTER TABLE dishes ADD COLUMN serving_g REAL`,
+  ],
 ];
 
 export async function migrate(adapter: SqlAdapter): Promise<void> {
