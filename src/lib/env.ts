@@ -32,6 +32,15 @@ export const env = {
    * region, leaking raw analytics off-shore (docs/analytics-handoff.md). Both
    * or neither. Returns null when analytics is intentionally off.
    */
+  /**
+   * Sentry DSN. Absent means "no crash reporting", not a crash — the same
+   * posture as RevenueCat. Unlike PostHog there is no half-configured state to
+   * guard against: a DSN carries its own host, so it cannot silently point at
+   * the wrong region.
+   */
+  get sentryDsn(): string | null {
+    return process.env.EXPO_PUBLIC_SENTRY_DSN || null;
+  },
   get postHog(): { key: string; host: string } | null {
     const key = process.env.EXPO_PUBLIC_POSTHOG_API_KEY;
     const host = process.env.EXPO_PUBLIC_POSTHOG_HOST;
