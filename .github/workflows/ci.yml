@@ -41,10 +41,17 @@ jobs:
         with:
           deno-version: v2.x
 
+      # --config points at supabase/functions/deno.json, which sets
+      # nodeModulesDir "none". Without it Deno finds the repo's package.json,
+      # switches to node_modules resolution, and fails on every npm: specifier
+      # the Expo app doesn't itself install (e.g. the Anthropic SDK).
+      # globstar so a future supabase/functions/_shared/**/*.ts is checked too.
       - name: Edge function typecheck + lint
         run: |
-          deno check supabase/functions/**/*.ts
-          deno lint supabase/functions/
+          shopt -s globstar
+          deno check --config supabase/functions/deno.json supabase/functions/**/*.ts
+          deno lint --config supabase/functions/deno.json supabase/functions/
+        shell: bash
 
       # Fails on high/critical. Moderates stay visible in the log; the only
       # current one is uuid<11.1.1 via expo's xcode config plugin — build-time
