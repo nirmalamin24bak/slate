@@ -263,7 +263,25 @@ async function build(): Promise<Services> {
   };
 }
 
+/**
+ * The app's single service graph, built once.
+ *
+ * Audit M3: this was `servicesPromise ??= build()`, which memoised the promise
+ * whether it resolved or rejected. One transient boot failure — an unopenable
+ * SQLite file, a schema migration that threw, a catalogue read on a corrupt
+ * mirror — was therefore cached forever, and every later caller (including the
+ * AppState foreground listener in app/_layout.tsx) got the same rejection for
+ * the life of the process. The user's only recovery was force-quitting an app
+ * that gave no sign of why it was dead.
+ *
+ * A rejection now clears the memo, so the next call genuinely retries. The
+ * rejection still propagates to this caller: the failure is surfaced, not
+ * swallowed. Concurrent callers already in flight share the same attempt.
+ */
 export function services(): Promise<Services> {
-  servicesPromise ??= build();
+  servicesPromise ??= build().catch((error: unknown) => {
+    servicesPromise = null;
+    throw error;
+  });
   return servicesPromise;
 }
