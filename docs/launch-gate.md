@@ -110,11 +110,16 @@ production run:
 ```
 supabase branches create prelaunch-check     # or a scratch project
 supabase db push --db-url "<branch url>"
-for f in supabase/seed/0*.sql; do psql "<branch url>" -v ON_ERROR_STOP=1 --single-transaction -f "$f"; done
-psql "<branch url>" -c "select count(*) from ingredients"   -- expect 549
-psql "<branch url>" -c "select count(*) from dishes"        -- expect 50
-psql "<branch url>" -c "select count(*) from dish_ingredients" -- expect 141
-psql "<branch url>" -c "select count(*) from exercises"     -- expect 20
+
+# then, with $env:SUPABASE_DB_URL set to the BRANCH url (not production):
+foreach ($f in Get-ChildItem supabase/seed/0*.sql) {
+  .\scripts\psql.ps1 -v ON_ERROR_STOP=1 --single-transaction -f "supabase/seed/$($f.Name)"
+}
+.\scripts\psql.ps1 -c "select
+    (select count(*) from ingredients)       as ingredients,       -- expect 549
+    (select count(*) from dishes)            as dishes,            -- expect 50
+    (select count(*) from dish_ingredients)  as dish_ingredients,  -- expect 141
+    (select count(*) from exercises)         as exercises"         -- expect 20
 ```
 
 **0.4 [eng, after 0.1–0.3] Merge PR #4.** Only then. The merge is what triggers the deploy.
