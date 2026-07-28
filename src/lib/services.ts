@@ -8,7 +8,7 @@ import type { SqlAdapter, SqlValue } from '../db/adapter';
 import { sqliteCacheStore } from '../db/cacheStore';
 import { ensureUserRows } from '../db/profileRepo';
 import { loadCatalogue } from '../db/referenceRepo';
-import { pullReference, pullUserData, pushDirty, type RemoteDb } from '../db/sync';
+import { collectKeyset, pullReference, pullUserData, pushDirty, type RemoteDb } from '../db/sync';
 import { JournalStore } from '../journal/store';
 import {
   resolve,
@@ -60,25 +60,46 @@ const supabaseRemote: RemoteDb = {
     if (error) throw new Error(`sync pull ${table}: ${error.message}`);
     return (data ?? []) as unknown as Record<string, SqlValue>[];
   },
-  async fetchOwned(table, userId, since) {
-    const all: Record<string, SqlValue>[] = [];
-    for (let from = 0; ; from += PAGE_SIZE) {
-      // Delta pull: order by updated_at and only take rows newer than the
-      // device's watermark. Soft-deletes bump updated_at, so tombstones ride
-      // the same delta — no separate deletion channel needed.
-      let query = supabase
-        .from(table)
-        .select('*')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: true });
-      if (since != null) query = query.gt('updated_at', since);
-      const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
-      if (error) throw new Error(`sync pull ${table}: ${error.message}`);
-      const page = (data ?? []) as unknown as Record<string, SqlValue>[];
-      all.push(...page);
-      if (page.length < PAGE_SIZE) break; // short page = last page
-    }
-    return all;
+  async fetchOwned(table, userId, cursor, keyColumn) {
+    // Delta pull, keyset-paged. Audit M6: this used an offset `.range()` over
+    // rows ordered by `updated_at` alone. That order is not total —
+    // `updated_at` repeats across a bulk write — so rows sharing a value could
+    // fall either side of a page boundary and be skipped, and because the caller
+    // then advanced its watermark past them they were never pulled again.
+    // (updated_at, primary key) is total, and a keyset cursor over a total order
+    // cannot skip or duplicate a row. The walk itself is collectKeyset in
+    // src/db/sync.ts, where it is tested against a boundary landing inside a run
+    // of identical timestamps; this closure is only the PostgREST half.
+    //
+    // Soft-deletes bump updated_at, so tombstones ride the same delta — no
+    // separate deletion channel needed.
+    return collectKeyset(
+      async (at, limit) => {
+        let query = supabase
+          .from(table)
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: true })
+          .order(keyColumn, { ascending: true })
+          .limit(limit);
+        if (at) {
+          // Row-value comparison, spelled out: PostgREST has no `(a,b) > (x,y)`.
+          // Values are quoted because a timestamptz carries `+` and `:`; neither
+          // a timestamp nor a uuid can contain the `,` or `)` that would break
+          // out of the filter, and both come from the server, not from user text.
+          query = query.or(
+            `updated_at.gt."${at.updatedAt}",` +
+              `and(updated_at.eq."${at.updatedAt}",${keyColumn}.gt."${at.key}")`,
+          );
+        }
+        const { data, error } = await query;
+        if (error) throw new Error(`sync pull ${table}: ${error.message}`);
+        return (data ?? []) as unknown as Record<string, SqlValue>[];
+      },
+      keyColumn,
+      PAGE_SIZE,
+      cursor,
+    );
   },
 };
 

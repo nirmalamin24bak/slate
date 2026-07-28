@@ -48,7 +48,15 @@ import {
 import type { SqlAdapter, SqlValue } from './adapter';
 import { adoptPendingUser, PENDING_USER_ID } from './adoption';
 import { migrate, SCHEMA_VERSION } from './schema';
-import { pullReference, pullUserData, pushDirty, type RemoteDb } from './sync';
+import {
+  collectKeyset,
+  cursorOf,
+  pullReference,
+  pullUserData,
+  pushDirty,
+  type RemoteDb,
+  type SyncCursor,
+} from './sync';
 import type { EntryRow, KitchenRow, WeightRow } from './rows';
 import { toKitchen } from './rows';
 
@@ -614,6 +622,21 @@ describe('referenceRepo', () => {
 });
 
 describe('sync', () => {
+  const str = (r: Record<string, SqlValue>, c: string) =>
+    typeof r[c] === 'string' ? (r[c] as string) : '';
+
+  /** Total order (updated_at, keyColumn) — what the server is asked to return. */
+  function totalOrder(rows: readonly Record<string, SqlValue>[], keyColumn: string) {
+    return [...rows].sort((a, b) => {
+      const byTime = str(a, 'updated_at').localeCompare(str(b, 'updated_at'));
+      return byTime !== 0 ? byTime : str(a, keyColumn).localeCompare(str(b, keyColumn));
+    });
+  }
+
+  /**
+   * A remote that serves rows in total order and honours a keyset cursor, the
+   * way PostgREST does with the filter services.ts builds.
+   */
   function fakeRemote(owned: Record<string, Record<string, SqlValue>[]> = {}): RemoteDb & {
     upserts: Record<string, Record<string, unknown>[]>;
     fetchCalls: { table: string; since: string | null }[];
@@ -630,14 +653,13 @@ describe('sync', () => {
         const fixture = REFERENCE_FIXTURE as unknown as Record<string, Record<string, SqlValue>[]>;
         return fixture[table] ?? [];
       },
-      // Honor the delta contract: record the watermark passed, and when given a
-      // `since`, return only rows strictly newer than it (as the server would).
-      async fetchOwned(table, _userId, since) {
-        fetchCalls.push({ table, since: since ?? null });
-        const rows = owned[table] ?? [];
-        return since == null
-          ? rows
-          : rows.filter((r) => typeof r['updated_at'] === 'string' && r['updated_at'] > since);
+      async fetchOwned(table, _userId, cursor, keyColumn) {
+        fetchCalls.push({ table, since: cursor?.updatedAt ?? null });
+        return totalOrder(owned[table] ?? [], keyColumn).filter((r) => {
+          if (!cursor) return true;
+          const u = str(r, 'updated_at');
+          return u > cursor.updatedAt || (u === cursor.updatedAt && str(r, keyColumn) > cursor.key);
+        });
       },
     };
   }
@@ -1098,5 +1120,142 @@ describe('entries ordering is total, not just by position', () => {
     await insertEntry(db, entry({ id: 'a', position: 0, created_at: T0, raw_text: 'earlier' }));
     expect((await listAllEntries(db, USER)).map((r) => r.raw_text)).toEqual(['earlier', 'later']);
     db.close();
+  });
+});
+
+// Audit M6. The pull used to page with an offset over rows ordered by
+// `updated_at` alone. That order is not total: a day flushed from offline, or
+// the adoption re-home, stamps many rows inside the same millisecond. Rows
+// sharing a value could fall either side of a page boundary and be skipped —
+// and because the caller then advanced its watermark past them, they were never
+// pulled again. Silent, permanent loss, surfacing as "my journal is gone" after
+// a reinstall.
+//
+// These exercise the real loop (collectKeyset), not a mock of it, against a
+// server model that returns rows in total order and honours a keyset cursor.
+describe('sync: keyset pagination', () => {
+  const PAGE = 1000;
+
+  /** Server model: rows strictly after the cursor in (updated_at, key) order. */
+  function server(rows: Record<string, SqlValue>[], keyColumn: string) {
+    const sorted = [...rows].sort((a, b) => {
+      const at = String(a['updated_at']);
+      const bt = String(b['updated_at']);
+      return at !== bt
+        ? at.localeCompare(bt)
+        : String(a[keyColumn]).localeCompare(String(b[keyColumn]));
+    });
+    let calls = 0;
+    const fetchPage = async (cursor: SyncCursor | null, limit: number) => {
+      calls++;
+      const after = sorted.filter((r) => {
+        if (!cursor) return true;
+        const u = String(r['updated_at']);
+        return (
+          u > cursor.updatedAt || (u === cursor.updatedAt && String(r[keyColumn]) > cursor.key)
+        );
+      });
+      return after.slice(0, limit);
+    };
+    return { fetchPage, calls: () => calls };
+  }
+
+  /** `id` is zero-padded so lexical order matches numeric order, as a uuid would not need. */
+  function rows(count: number, updatedAt: (i: number) => string) {
+    return Array.from({ length: count }, (_, i) => ({
+      id: `e${String(i).padStart(5, '0')}`,
+      updated_at: updatedAt(i),
+    })) as Record<string, SqlValue>[];
+  }
+
+  it('loses nothing when 1,500 rows share one timestamp across a page boundary', async () => {
+    // The exact shape that used to break: more rows than a page, all with an
+    // identical updated_at, so `updated_at > watermark` can never advance.
+    const all = rows(1500, () => T0);
+    const { fetchPage } = server(all, 'id');
+
+    const pulled = await collectKeyset(fetchPage, 'id', PAGE);
+
+    expect(pulled).toHaveLength(1500);
+    expect(new Set(pulled.map((r) => r['id'])).size).toBe(1500); // no duplicates
+    expect(pulled.map((r) => r['id'])).toEqual(all.map((r) => r['id'])); // and in order
+  });
+
+  it('loses nothing when a page boundary lands inside a run of equal timestamps', async () => {
+    // 999 distinct, then a 200-long run of one timestamp: the boundary at 1000
+    // falls in the middle of the run.
+    const all = rows(1199, (i) =>
+      i < 999 ? `2026-07-10T00:00:${String(i % 60).padStart(2, '0')}.${i}Z` : T0,
+    );
+    const { fetchPage } = server(all, 'id');
+
+    const pulled = await collectKeyset(fetchPage, 'id', PAGE);
+
+    expect(pulled).toHaveLength(1199);
+    expect(new Set(pulled.map((r) => r['id'])).size).toBe(1199);
+  });
+
+  it('terminates when the row count is an exact multiple of the page size', async () => {
+    const { fetchPage, calls } = server(
+      rows(2000, () => T0),
+      'id',
+    );
+
+    const pulled = await collectKeyset(fetchPage, 'id', PAGE);
+
+    expect(pulled).toHaveLength(2000);
+    expect(calls()).toBe(3); // two full pages, then an empty one that ends it
+  });
+
+  it('resumes from a caller-supplied cursor without re-reading what came before', async () => {
+    const all = rows(10, () => T0);
+    const { fetchPage } = server(all, 'id');
+
+    const pulled = await collectKeyset(fetchPage, 'id', PAGE, {
+      updatedAt: T0,
+      key: 'e00004',
+    });
+
+    expect(pulled.map((r) => r['id'])).toEqual(['e00005', 'e00006', 'e00007', 'e00008', 'e00009']);
+  });
+
+  it('makes exactly one call when the first page is short', async () => {
+    const { fetchPage, calls } = server(
+      rows(3, () => T0),
+      'id',
+    );
+    expect(await collectKeyset(fetchPage, 'id', PAGE)).toHaveLength(3);
+    expect(calls()).toBe(1);
+  });
+
+  it('returns nothing, and does not loop, when the table is empty', async () => {
+    const { fetchPage, calls } = server([], 'id');
+    expect(await collectKeyset(fetchPage, 'id', PAGE)).toEqual([]);
+    expect(calls()).toBe(1);
+  });
+
+  it('stops rather than looping when a full page yields no usable cursor', async () => {
+    // Defensive: a full page whose last row has no key would otherwise re-fetch
+    // itself forever and hang the sync tick.
+    let calls = 0;
+    const fetchPage = async () => {
+      calls++;
+      return [{ updated_at: T0, id: null }] as unknown as Record<string, SqlValue>[];
+    };
+    expect(await collectKeyset(fetchPage, 'id', 1)).toHaveLength(1);
+    expect(calls).toBe(1);
+  });
+
+  it('takes the cursor from the last row, not the greatest timestamp', async () => {
+    // Both rows share a timestamp; the tiebreaker key is what has to advance.
+    const page = [
+      { id: 'a', updated_at: T0 },
+      { id: 'b', updated_at: T0 },
+    ] as unknown as Record<string, SqlValue>[];
+    expect(cursorOf(page, 'id')).toEqual({ updatedAt: T0, key: 'b' });
+  });
+
+  it('has no cursor for an empty page', () => {
+    expect(cursorOf([], 'id')).toBeNull();
   });
 });

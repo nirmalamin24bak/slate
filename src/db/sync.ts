@@ -24,22 +24,44 @@ import {
 } from './referenceRepo';
 import type { EntryRow, KitchenRow, ProfileRow, WeightRow } from './rows';
 
+/**
+ * Where a table's down-sync got to, as a point in a TOTAL order.
+ *
+ * Audit M6: this used to be a bare `updated_at` string, and the pull paged with
+ * an offset range over rows ordered by `updated_at` alone. `updated_at` is not
+ * unique — a day flushed from offline, or the adoption re-home, stamps many rows
+ * within the same millisecond — so rows sharing a value could straddle a page
+ * boundary and be silently skipped. The watermark then advanced past them and
+ * they were never pulled again: permanent, invisible data loss, surfacing as
+ * "my journal is gone" after a reinstall.
+ *
+ * `(updated_at, key)` is unique because `key` is the table's primary key, so it
+ * is a total order, and a keyset cursor over a total order cannot skip or repeat
+ * a row however the pages fall.
+ */
+export interface SyncCursor {
+  updatedAt: string;
+  key: string;
+}
+
 export interface RemoteDb {
   /** upsert rows into a table; throws on error */
   upsert(table: string, rows: readonly Record<string, SqlValue>[]): Promise<void>;
   /** full select of a reference table */
   fetchAll(table: string, columns: string): Promise<Record<string, SqlValue>[]>;
   /**
-   * Select one user's rows from a user-owned table, paged internally. When
-   * `since` is given, returns only rows with updated_at > since (delta sync):
-   * the first sync of a device passes null and pulls everything; later ticks
-   * pass the watermark and pull only what changed. Ordered by updated_at so the
-   * caller can advance the watermark to the last row seen.
+   * Select one user's rows from a user-owned table, paged internally.
+   *
+   * Returns rows strictly after `cursor` in the total order `(updated_at,
+   * keyColumn)`, ascending, and MUST return them in that order — the caller
+   * takes the last row as the next cursor. A null cursor pulls everything, which
+   * is what a fresh install or a reinstall needs.
    */
   fetchOwned(
     table: string,
     userId: string,
-    since?: string | null,
+    cursor: SyncCursor | null,
+    keyColumn: string,
   ): Promise<Record<string, SqlValue>[]>;
 }
 
@@ -130,54 +152,121 @@ export async function pushDirty(
   }
 }
 
-// --- delta-sync watermark (local bookkeeping in the `meta` k/v table) ---
-// Per-table high-water mark of the server updated_at this device has pulled.
+// --- delta-sync cursor (local bookkeeping in the `meta` k/v table) ---
+// Per-table position in the total order this device has pulled up to.
 // Namespaced by user so switching identity (anon → adopted) never reuses a
-// stale watermark. Absent watermark → null → the table gets a full pull, which
-// is exactly what a fresh install or a reinstall needs.
+// stale cursor. Absent cursor → null → the table gets a full pull, which is
+// exactly what a fresh install or a reinstall needs.
+//
+// The key is deliberately NOT the old `sync_watermark:` name. A device upgrading
+// from a build that stored a bare timestamp there finds no cursor and does one
+// full pull, which is correct (the merge is last-write-wins and never clobbers a
+// dirty local row) — rather than this code parsing a legacy value as JSON.
 
-function watermarkKey(table: string, userId: string): string {
-  return `sync_watermark:${userId}:${table}`;
+/** The primary key each table's total order breaks ties on. */
+const KEY_COLUMN: Record<string, string> = {
+  entries: 'id',
+  weights: 'id',
+  profiles: 'user_id',
+  kitchen: 'user_id',
+};
+
+function cursorKey(table: string, userId: string): string {
+  return `sync_cursor:${userId}:${table}`;
 }
 
-async function getWatermark(
+async function getCursor(
   adapter: SqlAdapter,
   table: string,
   userId: string,
-): Promise<string | null> {
+): Promise<SyncCursor | null> {
   const row = await adapter.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', [
-    watermarkKey(table, userId),
+    cursorKey(table, userId),
   ]);
-  return row?.value ?? null;
+  if (!row?.value) return null;
+  try {
+    const parsed: unknown = JSON.parse(row.value);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const { updatedAt, key } = parsed as Partial<SyncCursor>;
+    if (typeof updatedAt !== 'string' || typeof key !== 'string') return null;
+    return { updatedAt, key };
+  } catch {
+    // Unreadable cursor → full pull. Costly, never wrong.
+    return null;
+  }
 }
 
-async function setWatermark(
+async function setCursor(
   adapter: SqlAdapter,
   table: string,
   userId: string,
-  value: string,
+  cursor: SyncCursor,
 ): Promise<void> {
   await adapter.run(
     `INSERT INTO meta (key, value) VALUES (?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-    [watermarkKey(table, userId), value],
+    [cursorKey(table, userId), JSON.stringify(cursor)],
   );
 }
 
-/** The newest updated_at across a pulled page, or null if the page is empty. */
-function maxUpdatedAt(rows: readonly Record<string, SqlValue>[]): string | null {
-  let max: string | null = null;
-  for (const r of rows) {
-    const u = r['updated_at'];
-    if (typeof u === 'string' && (max === null || u > max)) max = u;
+/**
+ * The cursor for the next pull: the LAST row of this page, not the maximum of
+ * it. The remote returns rows in total order, so the last row is the greatest —
+ * and taking it by position rather than by comparison is what makes the cursor
+ * carry the tiebreaker key as well as the timestamp.
+ */
+export function cursorOf(
+  rows: readonly Record<string, SqlValue>[],
+  keyColumn: string,
+): SyncCursor | null {
+  const last = rows[rows.length - 1];
+  if (!last) return null;
+  const updatedAt = last['updated_at'];
+  const key = last[keyColumn];
+  if (typeof updatedAt !== 'string' || typeof key !== 'string') return null;
+  return { updatedAt, key };
+}
+
+/** Fetch one page of rows strictly after `cursor`, in total order, at most `limit` rows. */
+export type PageFetcher = (
+  cursor: SyncCursor | null,
+  limit: number,
+) => Promise<Record<string, SqlValue>[]>;
+
+/**
+ * Walk every page of a keyset-paginated read and return the rows.
+ *
+ * This lives here, away from the Supabase client, because it is the part of the
+ * pull that was wrong (audit M6) and the part that has to be tested against a
+ * page boundary landing in the middle of a run of identical `updated_at` values.
+ * `src/lib/services.ts` supplies a `fetchPage` that talks to PostgREST; a test
+ * supplies one backed by an array.
+ */
+export async function collectKeyset(
+  fetchPage: PageFetcher,
+  keyColumn: string,
+  pageSize: number,
+  initial: SyncCursor | null = null,
+): Promise<Record<string, SqlValue>[]> {
+  const all: Record<string, SqlValue>[] = [];
+  let at: SyncCursor | null = initial;
+  for (;;) {
+    const page = await fetchPage(at, pageSize);
+    all.push(...page);
+    if (page.length < pageSize) return all; // short page = last page
+    const next = cursorOf(page, keyColumn);
+    // A full page whose last row yields no cursor would re-fetch itself forever.
+    // Stop; the caller's stored cursor is unchanged and the next tick re-reads
+    // this page, which the last-write-wins merge tolerates.
+    if (next === null) return all;
+    at = next;
   }
-  return max;
 }
 
 /**
- * Pull one table's delta, merge it, and advance the watermark. Kept generic so
+ * Pull one table's delta, merge it, and advance the cursor. Kept generic so
  * every table follows the identical read → merge (in a transaction) → advance
- * sequence. The watermark advances only after a successful merge, and only when
+ * sequence. The cursor advances only after a successful merge, and only when
  * the page was non-empty, so a failed/skipped merge never loses ground.
  */
 async function pullTable(
@@ -187,11 +276,12 @@ async function pullTable(
   userId: string,
   merge: (rows: Record<string, SqlValue>[]) => Promise<void>,
 ): Promise<void> {
-  const since = await getWatermark(adapter, table, userId);
-  const rows = await remote.fetchOwned(table, userId, since);
+  const keyColumn = KEY_COLUMN[table] ?? 'id';
+  const cursor = await getCursor(adapter, table, userId);
+  const rows = await remote.fetchOwned(table, userId, cursor, keyColumn);
   await adapter.transaction(() => merge(rows));
-  const max = maxUpdatedAt(rows);
-  if (max !== null) await setWatermark(adapter, table, userId, max);
+  const next = cursorOf(rows, keyColumn);
+  if (next !== null) await setCursor(adapter, table, userId, next);
 }
 
 /**
