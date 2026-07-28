@@ -163,10 +163,24 @@ jobs:
       #
       # All three files are idempotent upserts and are applied in name order,
       # inside a single transaction with ON_ERROR_STOP, so a bad file leaves
-      # the tables as they were. Requires the SUPABASE_DB_URL secret (Project
-      # Settings → Database → Connection string, session pooler).
+      # the tables as they were.
+      #
+      # SUPABASE_DB_URL must be the SESSION POOLER string, not the direct one:
+      # db.<ref>.supabase.co resolves to AAAA only (no IPv4 address at all)
+      # unless the IPv4 add-on is bought, and GitHub runners are IPv4-only, so
+      # the direct string cannot connect from here. The pooler host
+      # (aws-0-<region>.pooler.supabase.com, user postgres.<ref>) has A records.
       - name: Apply reference seed
         run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo '::error::SUPABASE_DB_URL is not set. The schema has already been pushed by the previous step; production now has the tables but no ingredients, dishes or exercises. Set the secret (session pooler string) and re-run this job.'
+            exit 1
+          fi
+          command -v psql >/dev/null 2>&1 || {
+            echo 'psql not on the runner — installing postgresql-client'
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          }
           for f in supabase/seed/0*.sql; do
             echo "applying $f"
             psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$f"

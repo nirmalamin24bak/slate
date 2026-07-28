@@ -33,12 +33,26 @@ at deploy — or worse, half-deploys.
 ```
 gh secret set SUPABASE_ACCESS_TOKEN   # personal access token, Supabase account settings
 gh secret set SUPABASE_PROJECT_REF    # ruynujwntbcgznoiwugl
-gh secret set SUPABASE_DB_URL         # Project Settings → Database → connection string (session pooler)
+gh secret set SUPABASE_DB_URL         # SESSION POOLER string — see the warning below
 gh secret list
 ```
 
+Run each without the value on the command line so it never lands in shell history; `gh`
+prompts for it.
+
 `SUPABASE_DB_URL` is new: it applies the reference seed (ingredients, dishes, exercises).
-Until it exists, production has no food table and every line resolves to nothing.
+Until it exists, production has the tables but no food in them, and every line resolves to
+nothing.
+
+> **It must be the session pooler string, not the direct one.** Checked 28 Jul 2026:
+> `db.ruynujwntbcgznoiwugl.supabase.co` has **no A record at all** (AAAA only), and GitHub
+> runners are IPv4-only — the direct string cannot connect from CI. The pooler host
+> `aws-0-ap-south-1.pooler.supabase.com` has A records. The pooler username also differs:
+> `postgres.ruynujwntbcgznoiwugl`, not plain `postgres`.
+>
+> The string carries the database password, so it belongs only in the secret store: never in
+> `.env`, never in a commit, never pasted into a chat or an issue. If one ever is, rotate it
+> at Project Settings → Database → Reset database password and set the secret again.
 
 **0.3 Dry-run the migrations and the seed.** Half of this is now automated and done:
 
