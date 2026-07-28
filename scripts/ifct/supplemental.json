@@ -1,0 +1,79 @@
+[
+  {
+    "id": "SUPP_SUGAR",
+    "name": "Sugar, white, refined",
+    "kcal_100g": 398,
+    "protein_100g": 0,
+    "carbs_100g": 99.5,
+    "fat_100g": 0,
+    "fiber_100g": 0,
+    "sugar_100g": 99.5,
+    "note": "Not in IFCT 2017 (book lists only jaggery I001 and cane juice I002). Refined sucrose is definitionally ~99.5g carb/100g; 398 kcal matches FSSAI label convention and USDA (387-400)."
+  },
+  {
+    "id": "SUPP_CURD",
+    "name": "Curd, whole cow milk (dahi)",
+    "kcal_100g": 73,
+    "protein_100g": 3.3,
+    "carbs_100g": 4.9,
+    "fat_100g": 4.5,
+    "fiber_100g": 0,
+    "sugar_100g": 4.9,
+    "note": "IFCT 2017 has no dahi row. Derived from IFCT L002 (milk, whole, cow: 73 kcal, 3.26/4.94/4.48) — fermentation converts lactose to lactic acid with negligible macro change. FLAG(nirmal): home dahi from toned milk would be ~58 kcal; whole-milk assumed."
+  },
+  {
+    "id": "SUPP_MILK_TONED",
+    "name": "Milk, toned (3.0% fat)",
+    "kcal_100g": 58,
+    "protein_100g": 3.1,
+    "carbs_100g": 4.7,
+    "fat_100g": 3.0,
+    "fiber_100g": 0,
+    "sugar_100g": 4.7,
+    "note": "IFCT 2017 lists only whole cow (L002) and whole buffalo (L001). Toned milk is the FSSAI standard 3.0% fat / 8.5% SNF product; 58 kcal/100ml matches Amul/Mother Dairy toned labels."
+  },
+  {
+    "id": "SUPP_BREAD_WHITE",
+    "name": "Bread, white, sliced",
+    "kcal_100g": 248,
+    "protein_100g": 8.0,
+    "carbs_100g": 49.0,
+    "fat_100g": 2.0,
+    "fiber_100g": 2.5,
+    "sugar_100g": 5.0,
+    "note": "IFCT 2017 covers ingredients, not prepared breads. Label-average of Britannia/Modern white sandwich bread (245-260 kcal/100g)."
+  },
+  {
+    "id": "SUPP_NOODLES_INSTANT",
+    "name": "Instant noodles, with tastemaker (dry)",
+    "kcal_100g": 447,
+    "protein_100g": 9.5,
+    "carbs_100g": 60.0,
+    "fat_100g": 15.5,
+    "fiber_100g": 2.0,
+    "sugar_100g": 1.5,
+    "note": "Branded packaged food, not in IFCT. Maggi 2-Minute Masala label: 313 kcal per 70g pack → 447/100g dry. dish_maggi uses 70g = one pack."
+  },
+  {
+    "id": "SUPP_CREAM",
+    "name": "Cream, fresh (25% milk fat)",
+    "kcal_100g": 250,
+    "protein_100g": 2.0,
+    "carbs_100g": 3.5,
+    "fat_100g": 25.0,
+    "fiber_100g": 0,
+    "sugar_100g": 3.5,
+    "note": "IFCT 2017 has no cream row. Amul Fresh Cream label (25% milk fat, ~250 kcal/100ml) — the pack home cooks actually use."
+  },
+  {
+    "id": "SUPP_TEA_LEAVES",
+    "name": "Tea leaves (infusion basis)",
+    "kcal_100g": 0,
+    "protein_100g": 0,
+    "carbs_100g": 0,
+    "fat_100g": 0,
+    "fiber_100g": 0,
+    "sugar_100g": 0,
+    "note": "Leaves are strained out of chai; the infusion's energy contribution is negligible and the dish's kcal comes from milk and sugar. Zero by design, not by omission."
+  }
+]

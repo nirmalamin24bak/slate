@@ -7,6 +7,7 @@ import * as Sharing from 'expo-sharing';
 
 import { listAllEntries } from '../db/entriesRepo';
 import { getKitchen, getProfile, listWeights } from '../db/profileRepo';
+import { track } from './analytics';
 import { buildBundle, entriesCsv, weightsCsv } from './export';
 import { services } from './services';
 
@@ -47,4 +48,8 @@ export async function shareExport(kind: ExportKind): Promise<void> {
   const uri = `${FileSystem.cacheDirectory}${FILE_NAMES[kind]}`;
   await FileSystem.writeAsStringAsync(uri, content);
   await Sharing.shareAsync(uri, { mimeType: MIME_TYPES[kind] });
+  // No `kind` property. Which format someone exports is not worth knowing, and
+  // the export itself is the DPDP portability right — counting exercises of a
+  // right in more detail than "it happened" is not a metric we need.
+  track({ name: 'export_run' });
 }

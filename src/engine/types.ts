@@ -49,6 +49,14 @@ export interface Dish {
   isHomeCookable: boolean;
   /** baseline cooking fat for the default portion; overridden by calibration */
   cookingFatMl: number | null;
+  /**
+   * Served weight of one default portion, in grams. Recipes for anything
+   * cooked from dry are written on the RAW basis — 50 g of rice becomes a
+   * 200 ml katori — so the recipe's own total is not what lands in the bowl.
+   * Null means the two coincide (a banana, a roti) and the recipe total is
+   * used. See portionBasisGrams.
+   */
+  servingG: number | null;
   ingredients: readonly DishIngredient[];
 }
 

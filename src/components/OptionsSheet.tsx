@@ -38,15 +38,10 @@ export function OptionsSheet({ visible, onClose }: { visible: boolean; onClose()
 
   return (
     <Sheet visible={visible} onClose={onClose}>
-      <Pressable
-        style={styles.row}
-        accessibilityRole="button"
-        onPress={() => go({ plus: true, route: '/chat' })}
-      >
-        <Text style={[type.body, { color: colors.ink }]}>Chat about your day →</Text>
-        {!plus && <PlusBadge />}
-      </Pressable>
-      <View style={[styles.divider, { backgroundColor: colors.hairline }]} />
+      {/* Chat is a stub ("coming soon") — its row is hidden until it ships so a
+          Plus user isn't sent to a non-working paid feature (App Store 2.1,
+          audit C1). Restore the row, its divider, and the paywall bullet
+          together. */}
       {ROWS.map((row) => (
         <Pressable
           key={row.label}

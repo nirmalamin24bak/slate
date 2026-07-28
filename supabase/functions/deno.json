@@ -1,0 +1,9 @@
+{
+  "//": "Deno config for the edge functions only. The repo root has a package.json (the Expo app), which makes Deno switch to node_modules resolution and then fail on any npm: specifier the app itself doesn't install — that is exactly how CI broke on npm:@anthropic-ai/sdk. The Supabase edge runtime has no node_modules at all, so 'none' is also the truthful production setting: resolve npm: from Deno's own cache, never from the app's tree.",
+  "nodeModulesDir": "none",
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+}

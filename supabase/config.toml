@@ -1,0 +1,22 @@
+# Supabase project config, version-controlled (plan E1). Before this, JWT
+# verification lived only in dashboard state — one toggle from disabled, with
+# no review gate. Declaring it here makes it reviewable and reproducible.
+
+project_id = "ruynujwntbcgznoiwugl"
+
+# resolver-classify and delete-account both authenticate a Supabase user and
+# MUST verify the JWT at the gateway.
+[functions.resolver-classify]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
+
+[functions.entitlement-refresh]
+verify_jwt = true
+
+# revenuecat-webhook is called by RevenueCat, not a Slate client. It has no
+# Supabase JWT; it authenticates via a shared secret in the Authorization
+# header. Gateway JWT verification MUST be off, or every webhook 401s.
+[functions.revenuecat-webhook]
+verify_jwt = false

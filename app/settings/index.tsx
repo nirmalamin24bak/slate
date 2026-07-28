@@ -47,11 +47,9 @@ export default function Settings() {
           plus={!plus}
           onPress={() => push(plus ? '/settings/kitchen' : '/paywall')}
         />
-        <ListRow
-          label="Widget"
-          plus={!plus}
-          onPress={() => push(plus ? '/settings/widget' : '/paywall')}
-        />
+        {/* Widget is a stub — hidden until built so a Plus user isn't sent to a
+            non-working paid feature (App Store 2.1, audit C1). Restore with the
+            paywall bullet when it ships. */}
         <ListRow label="Dark mode" onPress={() => push('/settings/appearance')} />
         <ListRow
           label="Send feedback"

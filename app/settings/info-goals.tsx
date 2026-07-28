@@ -54,11 +54,9 @@ export default function InfoGoals() {
           onPress={() => push(plus ? '/settings/saved-foods' : '/paywall')}
         />
         <ListRow label="Personalization" onPress={() => push('/settings/personalization')} />
-        <ListRow
-          label="Apple Health"
-          plus={!plus}
-          onPress={() => push(plus ? '/settings/apple-health' : '/paywall')}
-        />
+        {/* Apple Health is a stub — hidden until built so a Plus user isn't sent
+            to a non-working paid feature (App Store 2.1, audit C1). Restore with
+            the paywall bullet when it ships. */}
 
         <Pressable
           accessibilityRole="button"

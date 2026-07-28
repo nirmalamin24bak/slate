@@ -6,11 +6,13 @@
 // ID via StoreKit, aliased to auth.uid() at boot. Refunds go through Apple —
 // said plainly, the sharpest differentiator in the category.
 
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { track } from '@/lib/analytics';
+import { reportError } from '@/lib/report';
 import { getPlusPrices, purchasePlus, restorePurchases, type PlusPlan } from '@/lib/revenuecat';
 import {
   accent,
@@ -37,17 +39,15 @@ const FREE = [
   '30-day history',
 ] as const;
 
+// App Store 2.1: the paywall may only advertise features that actually work in
+// the shipping build. Widgets, Photo logging, Chat, Apple Health, and Custom
+// dishes are still stubs — list each again here as it ships. (Audit C1.)
 const PLUS = [
   'Stats',
   'Fiber & sugar',
   'Kitchen calibration',
   'Saved foods',
-  'Widgets',
-  'Photo logging',
-  'Chat',
-  'Apple Health',
   'Full history',
-  'Custom dishes',
 ] as const;
 
 function Column({ title, items }: { title: string; items: readonly string[] }) {
@@ -69,13 +69,26 @@ export default function Paywall() {
   const router = useRouter();
   const [prices, setPrices] = useState(FALLBACK);
   const [busy, setBusy] = useState(false);
+  // Which gate sent the user here. Unknown values fall back to 'settings' — the
+  // param is a route string and this keeps PaywallGate closed (spec/08: no free
+  // text reaches an event payload, even from our own navigation).
+  const { gate } = useLocalSearchParams<{ gate?: string }>();
+
+  useEffect(() => {
+    track({
+      name: 'paywall_viewed',
+      gate: gate === 'history_depth' ? 'history_depth' : 'settings',
+    });
+  }, [gate]);
 
   useEffect(() => {
     let mounted = true;
-    getPlusPrices().then((p) => {
-      if (!mounted) return;
-      setPrices({ monthly: p.monthly ?? FALLBACK.monthly, yearly: p.yearly ?? FALLBACK.yearly });
-    });
+    getPlusPrices()
+      .then((p) => {
+        if (!mounted) return;
+        setPrices({ monthly: p.monthly ?? FALLBACK.monthly, yearly: p.yearly ?? FALLBACK.yearly });
+      })
+      .catch((error: unknown) => reportError(error, { screen: 'paywall' }));
     return () => {
       mounted = false;
     };
@@ -91,7 +104,10 @@ export default function Paywall() {
     setBusy(true);
     try {
       const { plus } = await purchasePlus(plan);
-      if (plus) dismiss();
+      if (plus) {
+        track({ name: 'purchase_completed', plan });
+        dismiss();
+      }
     } catch {
       // Apple's own cancel/failure sheet already told the user; no toast.
     } finally {

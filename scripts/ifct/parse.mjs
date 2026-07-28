@@ -102,7 +102,8 @@ export function toIngredientRows(records, mapping) {
   });
 }
 
-function sqlLit(value) {
+/** SQL literal for a string/number/null. Single quotes doubled; no other escaping needed. */
+export function sqlLit(value) {
   if (value === null) return 'null';
   if (typeof value === 'number') return String(value);
   return `'${value.replace(/'/g, "''")}'`;

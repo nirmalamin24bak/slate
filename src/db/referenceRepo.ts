@@ -16,6 +16,11 @@ async function replaceRows(
   columns: readonly string[],
   rows: readonly Record<string, SqlValue>[],
 ): Promise<void> {
+  // An empty payload is a transient pull failure (network blip, RLS hiccup that
+  // returned [] without throwing), never a legitimately-emptied catalogue —
+  // reference data only grows. Truncating here would wipe the mirror and degrade
+  // every line to unresolved until a good pull lands. Keep what we have.
+  if (rows.length === 0) return;
   await runTransaction(adapter, async () => {
     await adapter.run(`DELETE FROM ${table}`);
     const placeholders = columns.map(() => '?').join(',');
@@ -57,7 +62,15 @@ export async function replaceDishes(
   await replaceRows(
     adapter,
     'dishes',
-    ['id', 'name', 'default_unit', 'default_qty', 'is_home_cookable', 'cooking_fat_ml'],
+    [
+      'id',
+      'name',
+      'default_unit',
+      'default_qty',
+      'is_home_cookable',
+      'cooking_fat_ml',
+      'serving_g',
+    ],
     dishes,
   );
   await replaceRows(
@@ -112,7 +125,7 @@ export async function loadCatalogue(adapter: SqlAdapter): Promise<Catalogue> {
 
 export async function loadDish(adapter: SqlAdapter, dishId: string): Promise<Dish | null> {
   const dish = await adapter.get<DishRowJoined>(
-    'SELECT id, default_unit, default_qty, is_home_cookable, cooking_fat_ml FROM dishes WHERE id = ?',
+    'SELECT id, default_unit, default_qty, is_home_cookable, cooking_fat_ml, serving_g FROM dishes WHERE id = ?',
     [dishId],
   );
   if (!dish) return null;

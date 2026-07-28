@@ -43,6 +43,23 @@ Deno.serve(async (req) => {
   const { data: userData, error: userError } = await asCaller.auth.getUser();
   if (userError || !userData.user) return json(401, { error: 'unauthorized' });
 
+  // Require an explicit confirmation flag in the body. A bare POST with just a
+  // (possibly stolen) token and no body will not wipe an account by accident.
+  // Note: this is not step-up auth — a true re-auth arrives with the optional
+  // sign-in feature (spec: sign-in is a Settings offer, not built yet).
+  let confirmed = false;
+  try {
+    const body = await req.json();
+    confirmed = body?.confirm === true;
+  } catch {
+    confirmed = false;
+  }
+  if (!confirmed) return json(400, { error: 'confirmation required' });
+
+  // Audit BEFORE the delete: the append-only row must exist even if the delete
+  // then fails, and it survives the cascade (no FK to auth.users).
+  await service.from('account_deletions').insert({ user_id: userData.user.id, source: 'edge' });
+
   // The uid comes from the verified token, never the body — a caller can only
   // delete themselves.
   const { error } = await service.auth.admin.deleteUser(userData.user.id);

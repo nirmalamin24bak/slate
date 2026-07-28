@@ -17,12 +17,14 @@ import {
   getEntry,
   insertEntry,
   listDay,
+  listResolving,
   listRetryable,
   nextPosition,
   patchEntry,
   type EntryPatch,
 } from '../db/entriesRepo';
 import { getKitchen, getProfile, patchProfile, upsertWeight } from '../db/profileRepo';
+import { track } from '../lib/analytics';
 import { getExercise, getPackagedFood, loadDish } from '../db/referenceRepo';
 import type { EntryRow, ExerciseRow } from '../db/rows';
 import { toKitchen } from '../db/rows';
@@ -69,15 +71,35 @@ export class JournalStore {
     return () => this.listeners.delete(listener);
   }
 
+  /** Nudge subscribers to re-read (e.g. after a down-sync changed rows). */
+  emitChange(): void {
+    this.emit({ type: 'change' });
+  }
+
   private emit(event: JournalEvent): void {
     for (const listener of this.listeners) listener(event);
   }
 
   /** Rebuild the retry queue after a cold start (force-quit survives in SQLite). */
   async restore(): Promise<void> {
-    const rows = await listRetryable(this.deps.adapter, this.deps.userId);
+    const { adapter, userId } = this.deps;
     const now = this.deps.now().getTime();
-    for (const row of rows) this.queue.push(row.id, now);
+    // Unresolved-but-retryable rows: the normal backoff queue survives a restart.
+    for (const row of await listRetryable(adapter, userId)) this.queue.push(row.id, now);
+    // B6: rows stuck at 'resolving' were mid-flight when the process died — the
+    // in-flight resolve is gone, so they'd shimmer forever. Demote each to the
+    // same shape a failed offline attempt leaves (unresolved + retryable) so
+    // drainDue's guard admits it, then queue it. This reuses the whole
+    // drain/backoff/cap path rather than adding a second resolving-drain branch.
+    for (const row of await listResolving(adapter, userId)) {
+      await patchEntry(
+        adapter,
+        row.id,
+        { status: 'unresolved', intent: 'unresolved', retryable: 1 },
+        this.deps.now().toISOString(),
+      );
+      this.queue.push(row.id, now);
+    }
   }
 
   async day(logDate: string): Promise<DayView> {
@@ -147,7 +169,23 @@ export class JournalStore {
       // drain requeues with the attempt count intact — resolveRow must not
       // also push, or the row would sit in the queue twice.
       const stillQueued = await this.resolveRow(row.id, false);
-      if (stillQueued) this.queue.requeue(item, this.deps.now().getTime());
+      if (stillQueued) {
+        const requeued = this.queue.requeue(item, this.deps.now().getTime());
+        if (!requeued) {
+          // Hit the attempt cap. Stop auto-retrying: clear the retryable flag
+          // so the drain guard skips it. The line stays unresolved with its
+          // manual ↻ (spec/09); it just no longer wakes the app on a timer.
+          await patchEntry(
+            this.deps.adapter,
+            row.id,
+            { retryable: 0 },
+            this.deps.now().toISOString(),
+          );
+          // No entry id: it joins to the row holding the user's raw_text, which
+          // is what spec/08 keeps out of analytics. The count is the signal.
+          track({ name: 'resolver_retry_exhausted' });
+        }
+      }
     }
   }
 
@@ -255,34 +293,60 @@ export class JournalStore {
 
     // Multi-entry split: the first segment stays on this row; the rest become
     // their own rows directly below it ("2 roti aur ek katori dal" → 2 lines).
+    // The position bump, the inserts, and the original's raw_text patch are one
+    // transaction — a crash mid-split otherwise leaves positions bumped with no
+    // extras inserted (a gap and a duplicate-position hazard). Capture the new
+    // ids so the apply loop targets rows directly, never by position arithmetic
+    // (which breaks if another line was added concurrently).
     const extras = segments.slice(1);
-    if (extras.length > 0) {
-      await adapter.run(
-        'UPDATE entries SET position = position + ? WHERE user_id = ? AND log_date = ? AND position > ?',
-        [extras.length, row.user_id, row.log_date, row.position],
-      );
-      for (const [i, segment] of extras.entries()) {
-        const nowIso = this.deps.now().toISOString();
-        await insertEntry(adapter, {
-          ...row,
-          id: this.deps.newId(),
-          position: row.position + 1 + i,
-          raw_text: segment.raw,
-          created_at: nowIso,
-          updated_at: nowIso,
-          dirty: 1,
-        });
+    const extraIds: string[] = [];
+    await adapter.transaction(async () => {
+      if (extras.length > 0) {
+        await adapter.run(
+          'UPDATE entries SET position = position + ? WHERE user_id = ? AND log_date = ? AND position > ?',
+          [extras.length, row.user_id, row.log_date, row.position],
+        );
+        for (const [i, segment] of extras.entries()) {
+          const nowIso = this.deps.now().toISOString();
+          const id = this.deps.newId();
+          extraIds.push(id);
+          await insertEntry(adapter, {
+            ...row,
+            id,
+            position: row.position + 1 + i,
+            raw_text: segment.raw,
+            // A fresh unresolved skeleton, not the parent's resolved state.
+            intent: 'unresolved',
+            status: 'resolving',
+            resolved_ref: null,
+            qty: null,
+            unit: null,
+            kcal: null,
+            protein_g: null,
+            carbs_g: null,
+            fat_g: null,
+            fiber_g: null,
+            sugar_g: null,
+            water_ml: null,
+            step_count: null,
+            sleep_minutes: null,
+            is_included: 0,
+            nickname: null,
+            created_at: nowIso,
+            updated_at: nowIso,
+            retryable: 0,
+            dirty: 1,
+          });
+        }
       }
-    }
+      await patchEntry(adapter, entryId, { raw_text: first.raw }, this.deps.now().toISOString());
+    });
 
-    await patchEntry(adapter, entryId, { raw_text: first.raw }, this.deps.now().toISOString());
-
-    // Apply each segment to its row (original + the extras just inserted).
-    const dayRows = await listDay(adapter, row.user_id, row.log_date);
+    // Apply each segment to its row: the original for i===0, else the extra we
+    // just inserted (matched by captured id, not by recomputed position).
     let anyRetryable = false;
     for (const [i, segment] of segments.entries()) {
-      const target =
-        i === 0 ? row : dayRows.find((r) => r.position === row.position + i && r.id !== row.id);
+      const target = i === 0 ? row : await getEntry(adapter, extraIds[i - 1] ?? '');
       if (!target) continue;
       const queued = await this.applyResolution(target, segment);
       if (i === 0) anyRetryable = queued;
@@ -381,23 +445,28 @@ export class JournalStore {
 
   private async writeBodyWeight(weightKg: number, logDate: string): Promise<void> {
     const nowIso = this.deps.now().toISOString();
-    await upsertWeight(this.deps.adapter, {
-      id: this.deps.newId(),
-      user_id: this.deps.userId,
-      log_date: logDate,
-      weight_kg: weightKg,
-      source: 'journal',
-      created_at: nowIso,
-      updated_at: nowIso,
-      deleted_at: null,
-      dirty: 1,
+    // The weight row and the profile's weight_kg are one source of truth for
+    // exercise math — write both atomically so a crash between them can't leave
+    // a logged weight with a stale (or assumed) profile, or vice versa.
+    await this.deps.adapter.transaction(async () => {
+      await upsertWeight(this.deps.adapter, {
+        id: this.deps.newId(),
+        user_id: this.deps.userId,
+        log_date: logDate,
+        weight_kg: weightKg,
+        source: 'journal',
+        created_at: nowIso,
+        updated_at: nowIso,
+        deleted_at: null,
+        dirty: 1,
+      });
+      await patchProfile(
+        this.deps.adapter,
+        this.deps.userId,
+        { weight_kg: weightKg, weight_is_assumed: 0 },
+        nowIso,
+      );
     });
-    await patchProfile(
-      this.deps.adapter,
-      this.deps.userId,
-      { weight_kg: weightKg, weight_is_assumed: 0 },
-      nowIso,
-    );
   }
 
   /** Re-derive every number on the day and persist only what changed. */
@@ -444,12 +513,21 @@ export class JournalStore {
     );
 
     const nowIso = this.deps.now().toISOString();
-    for (const [id, patch] of patches) {
-      await patchEntry(adapter, id, patch, nowIso);
-      // A food ref that fell out of the catalogue re-queues honestly.
-      if (patch.status === 'unresolved' && patch.retryable === 1) {
-        this.queue.push(id, this.deps.now().getTime());
+    // Apply all patches atomically: oil-share distribution is a day-level
+    // computation, so a crash mid-loop must not leave some rows on the new
+    // values and some stale (inconsistent totals until the next full
+    // recompute). Reads above stay outside the write lock to keep it short.
+    // Queue side-effects run after commit — never touch the queue inside the tx.
+    const toQueue: string[] = [];
+    await adapter.transaction(async () => {
+      for (const [id, patch] of patches) {
+        await patchEntry(adapter, id, patch, nowIso);
+        // A food ref that fell out of the catalogue re-queues honestly.
+        if (patch.status === 'unresolved' && patch.retryable === 1) {
+          toQueue.push(id);
+        }
       }
-    }
+    });
+    for (const id of toQueue) this.queue.push(id, this.deps.now().getTime());
   }
 }

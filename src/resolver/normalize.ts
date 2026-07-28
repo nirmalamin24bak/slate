@@ -113,8 +113,11 @@ export function normalize(raw: string): string {
  * key, so an unsplit compound line could never cache.
  */
 export function splitEntries(raw: string): string[] {
+  // A comma between two digits is a thousands separator ("12,000 steps"), not a
+  // segment break — normalize() strips it later, but the split runs first, so
+  // guard it here. Comma splits only when NOT flanked by digits on both sides.
   return raw
-    .split(/,|\+|\s+aur\s+|\s+and\s+/i)
+    .split(/(?<!\d),(?!\d)|\+|\s+aur\s+|\s+and\s+/i)
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
 }

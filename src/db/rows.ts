@@ -107,6 +107,7 @@ export interface DishRowJoined {
   default_qty: number;
   is_home_cookable: number;
   cooking_fat_ml: number | null;
+  serving_g: number | null;
 }
 
 export interface DishIngredientJoined {
@@ -172,6 +173,9 @@ export function toDish(dish: DishRowJoined, ingredients: readonly DishIngredient
     defaultQty: dish.default_qty,
     isHomeCookable: dish.is_home_cookable === 1,
     cookingFatMl: dish.cooking_fat_ml,
+    // undefined (an older mirror missing the column) reads as null, i.e. the
+    // recipe total is the serving weight — the pre-serving_g behaviour.
+    servingG: dish.serving_g ?? null,
     ingredients: mapped,
   };
 }

@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { chaiKcal, coffeeKcal, dailyOilMlPerPerson, oilShares } from './kitchen';
+import {
+  chaiKcal,
+  chaiNutrition,
+  coffeeKcal,
+  coffeeNutrition,
+  dailyOilMlPerPerson,
+  oilShares,
+} from './kitchen';
 import type { Kitchen } from './types';
 
 const kitchen: Kitchen = {
@@ -70,5 +77,31 @@ describe('coffeeKcal', () => {
   test('filter coffee decoction: +5 kcal, 100ml milk assumed', () => {
     // 2 + 5 + (35/60)×100 + 16 = 81.333… (milk type for decoction is FLAG(nirmal))
     expect(coffeeKcal({ ...kitchen, coffeeMilk: 'decoction' })).toBeCloseTo(81.33333, 4);
+  });
+});
+
+describe('chaiNutrition / coffeeNutrition — kcal + sugar macros for the compute path', () => {
+  test('chai carries its calibrated kcal and sugar-derived carbs/sugar', () => {
+    const n = chaiNutrition(kitchen); // 1 tsp sugar
+    expect(n.kcal).toBe(56);
+    expect(n.sugarG).toBe(4); // 1 tsp ≈ 4 g
+    expect(n.carbsG).toBe(4);
+    expect(n.proteinG).toBe(0);
+    expect(n.fatG).toBe(0);
+    expect(n.fiberG).toBe(0);
+  });
+
+  test('coffee scales sugar macros with the sugar count', () => {
+    const n = coffeeNutrition({ ...kitchen, coffeeSugarTsp: 2 });
+    expect(n.kcal).toBe(coffeeKcal({ ...kitchen, coffeeSugarTsp: 2 }));
+    expect(n.sugarG).toBe(8); // 2 tsp ≈ 8 g
+    expect(n.carbsG).toBe(8);
+  });
+
+  test('black no-sugar beverages carry zero macros', () => {
+    const n = chaiNutrition({ ...kitchen, chaiSugarTsp: 0, chaiMilk: 'none' });
+    expect(n.kcal).toBe(5);
+    expect(n.sugarG).toBe(0);
+    expect(n.carbsG).toBe(0);
   });
 });

@@ -3,6 +3,7 @@
 // (non-negotiable: Slate never picks a goal).
 
 import { runTransaction, type SqlAdapter, type SqlValue } from './adapter';
+import type { SyncedRef } from './entriesRepo';
 import type { KitchenRow, ProfileRow, WeightRow } from './rows';
 
 export async function getProfile(adapter: SqlAdapter, userId: string): Promise<ProfileRow | null> {
@@ -135,11 +136,132 @@ export async function listDirtyWeights(adapter: SqlAdapter): Promise<WeightRow[]
   return adapter.all<WeightRow>('SELECT * FROM weights WHERE dirty = 1');
 }
 
+/** See markEntriesSynced: clear dirty only if the row wasn't re-edited. */
 export async function markWeightsSynced(
   adapter: SqlAdapter,
-  ids: readonly string[],
+  refs: readonly SyncedRef[],
 ): Promise<void> {
-  for (const id of ids) {
-    await adapter.run('UPDATE weights SET dirty = 0 WHERE id = ?', [id]);
+  for (const ref of refs) {
+    await adapter.run('UPDATE weights SET dirty = 0 WHERE id = ? AND updated_at = ?', [
+      ref.id,
+      ref.updated_at,
+    ]);
   }
+}
+
+// --- down-sync merges (LWW, dirty-skip). Callers wrap in a transaction. ---
+
+/**
+ * Weights merge on the natural key (user_id, log_date), not id: two devices
+ * logging the same day mint different UUIDs but must converge to one row. The
+ * local unique(user_id, log_date) would otherwise reject the second insert.
+ */
+export async function pullMergeWeights(
+  adapter: SqlAdapter,
+  rows: readonly Record<string, SqlValue>[],
+): Promise<void> {
+  for (const row of rows) {
+    await adapter.run(
+      `INSERT INTO weights (id, user_id, log_date, weight_kg, source, created_at, updated_at, deleted_at, dirty)
+       VALUES (?,?,?,?,?,?,?,?,0)
+       ON CONFLICT(user_id, log_date) DO UPDATE SET
+         weight_kg = excluded.weight_kg, source = excluded.source,
+         updated_at = excluded.updated_at, deleted_at = excluded.deleted_at
+       WHERE weights.dirty = 0 AND excluded.updated_at > weights.updated_at`,
+      [
+        row['id'] ?? null,
+        row['user_id'] ?? null,
+        row['log_date'] ?? null,
+        row['weight_kg'] ?? null,
+        row['source'] ?? null,
+        row['created_at'] ?? null,
+        row['updated_at'] ?? null,
+        row['deleted_at'] ?? null,
+      ],
+    );
+  }
+}
+
+/**
+ * Profile/kitchen are one row per user, keyed on user_id. The local row always
+ * exists before a pull (services.build runs ensureUserRows first), so this is a
+ * guarded UPDATE, not an upsert: LWW on updated_at, and a locally-dirty row is
+ * never overwritten. Only columns actually present in the server payload are
+ * written, so a column the server omits keeps its local value rather than
+ * becoming null — and there is no partial-INSERT path to violate NOT NULL.
+ */
+async function pullMergeSingleton(
+  adapter: SqlAdapter,
+  table: 'profiles' | 'kitchen',
+  columns: readonly string[],
+  row: Record<string, SqlValue> | undefined,
+): Promise<void> {
+  if (!row || row['updated_at'] === undefined || row['user_id'] === undefined) return;
+  const writable = columns.filter((c) => c !== 'user_id' && c in row);
+  if (writable.length === 0) return;
+  const sets = writable.map((c) => `${c} = ?`).join(', ');
+  await adapter.run(
+    `UPDATE ${table} SET ${sets}
+     WHERE user_id = ? AND dirty = 0 AND ? > updated_at`,
+    [
+      ...writable.map((c) => row[c] as SqlValue),
+      row['user_id'] as SqlValue,
+      row['updated_at'] as SqlValue,
+    ],
+  );
+}
+
+const PROFILE_COLUMNS = [
+  'user_id',
+  'dob',
+  'sex',
+  'height_cm',
+  'weight_kg',
+  'weight_is_assumed',
+  'calorie_goal',
+  'protein_goal_g',
+  'carbs_goal_g',
+  'fat_goal_g',
+  'unit_height',
+  'hide_calories',
+  'show_macros',
+  'show_fiber_sugar',
+  'show_exercise',
+  'show_weight',
+  'show_water',
+  'show_steps',
+  'show_sleep',
+  'personalization',
+  'created_at',
+  'updated_at',
+] as const;
+
+const KITCHEN_COLUMNS = [
+  'user_id',
+  'katori_ml',
+  'roti_g',
+  'oil_bottle_ml',
+  'oil_bottle_days',
+  'household_size',
+  'chai_sugar_tsp',
+  'chai_milk',
+  'coffee_sugar_tsp',
+  'coffee_milk',
+  'is_assumed',
+  'created_at',
+  'updated_at',
+] as const;
+
+export async function pullMergeProfile(
+  adapter: SqlAdapter,
+  row: Record<string, SqlValue> | undefined,
+): Promise<void> {
+  await pullMergeSingleton(adapter, 'profiles', PROFILE_COLUMNS, row);
+}
+
+export async function pullMergeKitchen(
+  adapter: SqlAdapter,
+  row: Record<string, SqlValue> | undefined,
+): Promise<void> {
+  await pullMergeSingleton(adapter, 'kitchen', KITCHEN_COLUMNS, row);
 }

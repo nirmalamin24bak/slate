@@ -22,6 +22,9 @@ function toTransportError(error: Error): TransportError {
   if (error instanceof FunctionsHttpError) {
     const status = error.context.status;
     if (status === 429) return new TransportError('rate_limit');
+    // 503 = the server kill switch (RESOLVER_DISABLED). Non-retryable: the
+    // pipeline falls back to unresolved rather than queueing a doomed retry.
+    if (status === 503) return new TransportError('disabled');
     return new TransportError('server');
   }
   if (error instanceof FunctionsFetchError || error instanceof FunctionsRelayError) {

@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { resolve, TransportError, type ClassifyTransport } from '../resolver';
+import { MAX_ATTEMPTS } from '../resolver/retryQueue';
 import { sqliteCacheStore } from '../db/cacheStore';
 import { getEntry, insertEntry, listDay } from '../db/entriesRepo';
 import { ensureUserRows, patchKitchen, patchProfile } from '../db/profileRepo';
@@ -254,6 +255,62 @@ describe('drainDue skip conditions', () => {
     await h.store.drainDue(); // must not throw or resurrect the row
     expect((await getEntry(h.db, id))?.deleted_at).not.toBeNull();
   });
+
+  it('restore re-queues a row stuck at resolving (crash mid-resolve) so it finishes', async () => {
+    // Simulate a force-quit between addLine's insert (status='resolving') and
+    // the resolver reply: a bare resolving row with nothing in the queue.
+    const nowIso = '2026-07-10T09:00:00.000Z';
+    await insertEntry(h.db, {
+      id: 'stuck',
+      user_id: USER,
+      log_date: DAY,
+      position: 0,
+      raw_text: '2 roti',
+      nickname: null,
+      intent: 'unresolved',
+      status: 'resolving',
+      resolved_ref: null,
+      qty: null,
+      unit: null,
+      context: null,
+      kcal: null,
+      protein_g: null,
+      carbs_g: null,
+      fat_g: null,
+      fiber_g: null,
+      sugar_g: null,
+      water_ml: null,
+      step_count: null,
+      sleep_minutes: null,
+      is_included: 0,
+      calc_version: 'pending',
+      was_calibrated: 0,
+      created_at: nowIso,
+      updated_at: nowIso,
+      deleted_at: null,
+      retryable: 0,
+      dirty: 1,
+    });
+    h.transport.replies.set(
+      '2 roti',
+      JSON.stringify([
+        {
+          intent: 'food',
+          ref: 'dish_roti',
+          qty: 2,
+          unit: 'roti',
+          context: 'home',
+          confidence: 0.95,
+        },
+      ]),
+    );
+
+    await h.store.restore(); // rebuild the queue from disk — must pick up 'stuck'
+    h.clock.t += 10_000;
+    await h.store.drainDue();
+
+    expect((await getEntry(h.db, 'stuck'))?.status).toBe('resolved');
+  });
 });
 
 describe('editLine and empty-input guards', () => {
@@ -281,5 +338,50 @@ describe('editLine and empty-input guards', () => {
     await h.store.editLine(id, '   ');
     const after = await getEntry(h.db, id);
     expect(after?.raw_text).toBe(before?.raw_text);
+  });
+});
+
+// The retry cap (audit A). A line that will never resolve — a dish nobody has
+// added yet, typed while the resolver is down — must stop waking the app on a
+// timer eventually. It stays on screen with its manual ↻, because the user's
+// text is never thrown away (spec/09); it just stops costing battery and
+// calls forever.
+describe('the retry queue gives up quietly', () => {
+  it('clears retryable after the attempt cap, leaving the line and its ↻ intact', async () => {
+    h.transport.online = false;
+    await h.store.addLine('2 roti', DAY);
+    const id = (await listDay(h.db, USER, DAY))[0]?.id ?? '';
+    expect((await getEntry(h.db, id))?.retryable).toBe(1);
+
+    // MAX_ATTEMPTS is 8; drain past it with the backoff always elapsed.
+    for (let i = 0; i < MAX_ATTEMPTS + 2; i++) {
+      h.clock.t += 60 * 60 * 1000;
+      await h.store.drainDue();
+    }
+
+    const row = await getEntry(h.db, id);
+    expect(row?.retryable).toBe(0); // no longer auto-retried
+    expect(row?.status).toBe('unresolved'); // still visible, still retryable by hand
+    expect(row?.raw_text).toBe('2 roti'); // the user's words are never discarded
+    expect(h.store.queuedCount).toBe(0); // and it is out of the queue
+
+    // A manual retry still works once the resolver is back — giving up on the
+    // timer is not giving up on the line.
+    h.transport.online = true;
+    h.transport.replies.set(
+      '2 roti',
+      JSON.stringify([
+        {
+          intent: 'food',
+          ref: 'dish_roti',
+          qty: 2,
+          unit: 'roti',
+          context: 'home',
+          confidence: 0.95,
+        },
+      ]),
+    );
+    await h.store.retryLine(id);
+    expect((await getEntry(h.db, id))?.status).toBe('resolved');
   });
 });

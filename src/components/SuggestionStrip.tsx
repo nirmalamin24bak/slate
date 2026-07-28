@@ -1,6 +1,7 @@
 // Suggestion strip (spec/02 §B): recents and saved foods above the keyboard,
 // one tap to insert. Free feature. Quiet chips, no icons, no counts.
 
+import { memo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import { radius, screenPadding, spacing, type, useTheme } from '@/theme';
@@ -11,7 +12,10 @@ export interface Suggestion {
   text: string;
 }
 
-export function SuggestionStrip({
+// Memoized: on the keystroke-critical journal, this sits beside the composer
+// and must not re-render per character. Its props (suggestions, onPick) are
+// stable across keystrokes, so memo makes typing skip it entirely.
+function SuggestionStripImpl({
   suggestions,
   onPick,
 }: {
@@ -42,6 +46,8 @@ export function SuggestionStrip({
     </ScrollView>
   );
 }
+
+export const SuggestionStrip = memo(SuggestionStripImpl);
 
 const styles = StyleSheet.create({
   strip: {

@@ -46,17 +46,19 @@ export const LITRE_ML = 1000;
 export const TEA_BASE_KCAL = 5;
 export const COFFEE_BASE_KCAL = 2;
 export const SUGAR_TSP_KCAL = 16;
+/** One level tsp of sugar ≈ 4 g (all carbohydrate, all free sugar). */
+export const SUGAR_TSP_G = 4;
 export const MILK_SERVING_ML = 60;
 export const MILK_KCAL_PER_60ML = { none: 0, toned: 35, full: 45 } as const;
 export const DECOCTION_EXTRA_KCAL = 5;
 export const DECOCTION_MILK_ML = 100;
 
-/** Kitchen units. tbsp/tsp are standard measures; cup is FLAG(nirmal): not in any spec. */
+/** Kitchen units. tbsp/tsp are standard measures. */
 export const TBSP_ML = 15;
 export const TSP_ML = 5;
-// FLAG(nirmal): spec/05 lists 'cup' in the unit vocabulary but no spec defines its ml.
-// 240 ml (standard measuring cup) used pending a decision.
-export const CUP_ML = 240;
+// 'cup' as an Indian beverage/serving unit is ~150 ml (a chai/coffee cup), not
+// the 240 ml US measuring cup. Ruled by Nirmal 12 Jul 2026.
+export const CUP_ML = 150;
 
 /** Stamped on every entry so a July recipe fix never rewrites a user's June. */
 export const CALC_VERSION = 'engine-v1';

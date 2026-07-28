@@ -10,6 +10,7 @@
 // shown, and the day can never read below 1,200 here. (The header's running
 // intraday total is a separate surface; see the FLAG in journal/compose.ts.)
 
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -60,7 +61,9 @@ export interface SummaryCardProps {
   onPress(): void;
 }
 
-export function SummaryCard({
+// Memoized: pinned on the keystroke-critical journal. With a stable onPress
+// from the parent, typing skips re-rendering the ring + macro SVG entirely.
+function SummaryCardImpl({
   totals,
   calorieGoal,
   hideCalories,
@@ -127,6 +130,8 @@ export function SummaryCard({
     </Pressable>
   );
 }
+
+export const SummaryCard = memo(SummaryCardImpl);
 
 const styles = StyleSheet.create({
   card: {

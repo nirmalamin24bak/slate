@@ -14,7 +14,17 @@ import type { Catalogue, Intent, Resolution, ResolverUnit } from './types';
 import { UNRESOLVED } from './types';
 import { validateModelOutput, validateResolution } from './validate';
 
-export type TransportFailure = 'network' | 'rate_limit' | 'timeout' | 'server';
+export type TransportFailure = 'network' | 'rate_limit' | 'timeout' | 'server' | 'disabled';
+
+/**
+ * Failures a later retry could clear. `disabled` (the server kill switch,
+ * HTTP 503) is deliberately excluded — retrying a resolver that has been
+ * turned off just hammers it, so those lines stay unresolved and
+ * non-retryable until the user edits or re-adds them.
+ */
+export function isRetryable(kind: TransportFailure): boolean {
+  return kind !== 'disabled';
+}
 
 export class TransportError extends Error {
   constructor(readonly kind: TransportFailure) {
@@ -133,10 +143,12 @@ async function resolveSegment(raw: string, deps: ResolveDeps): Promise<ResolvedS
       deps.transport.classify(normalized),
       deps.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     );
-  } catch {
-    // Offline, rate-limited, timed out, or something unforeseen: all of them
-    // are "try again later", none of them are the user's problem.
-    return [{ ...base, resolution: UNRESOLVED, source: 'model', retryable: true }];
+  } catch (error) {
+    // Offline, rate-limited, or timed out: "try again later", the queue picks
+    // it up. A disabled resolver (503) is the one failure a retry can't clear,
+    // so it comes back non-retryable and stops thrashing the queue.
+    const retryable = error instanceof TransportError ? isRetryable(error.kind) : true;
+    return [{ ...base, resolution: UNRESOLVED, source: 'model', retryable }];
   }
 
   const resolutions = validateModelOutput(reply, deps.catalogue);

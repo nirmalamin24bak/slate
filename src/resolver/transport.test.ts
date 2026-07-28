@@ -54,6 +54,12 @@ describe('edgeTransport', () => {
     );
   });
 
+  it('HTTP 503 → disabled (the kill switch, non-retryable)', async () => {
+    await expect(kindOf(new FunctionsHttpError(new Response('', { status: 503 })))).resolves.toBe(
+      'disabled',
+    );
+  });
+
   it('fetch/relay failures → network', async () => {
     await expect(kindOf(new FunctionsFetchError(null))).resolves.toBe('network');
     await expect(kindOf(new FunctionsRelayError(null))).resolves.toBe('network');

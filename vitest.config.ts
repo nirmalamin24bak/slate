@@ -11,6 +11,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  // React Native's global. Under Node it is undefined; define it so modules
+  // that branch on __DEV__ (revenuecat dev override, report sink) can be tested.
+  define: {
+    __DEV__: false,
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
@@ -43,21 +48,27 @@ export default defineConfig({
       thresholds: {
         'src/engine/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/resolver/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
-        'src/db/**': { statements: 90, branches: 75, functions: 90, lines: 90 },
-        // journal branches sit below the engine/resolver bar because the
-        // uncovered ones are defensive nullish-coalescing on already-parsed
-        // date parts (dates.ts `?? 1970`) and recompute lookup-miss paths
-        // that only fire on a corrupt local mirror. The reachable offline
-        // contract — queue, drain, requeue, degrade — is fully exercised.
-        'src/journal/**': { statements: 90, branches: 78, functions: 90, lines: 95 },
+        // Raised 28 Jul 2026: branches were passing by 0.19pp, so the next
+        // uncovered branch anywhere in src/db failed CI. Covering the down-sync
+        // merges' sparse-payload fallbacks took the real number to 81.4%; the
+        // floors below now sit under it with room, and above where it was.
+        'src/db/**': { statements: 95, branches: 80, functions: 95, lines: 98 },
+        // Raised 28 Jul 2026 (was 90/78/90/95, and branches sat at 79.11%).
+        // The degraded inputs recompute has to survive — a barcode logged in
+        // kilograms, a packaged row with no energy, an exercise whose ref left
+        // the mirror, a stale steps burn — and the store's subscription seams
+        // are now covered, taking branches to 84.58% and functions to 100%.
+        // What remains uncovered is defensive coalescing that only fires on a
+        // corrupt local mirror.
+        'src/journal/**': { statements: 96, branches: 83, functions: 100, lines: 98 },
         'src/onboarding/**': { statements: 100, branches: 95, functions: 100, lines: 100 },
         // Phase-5 pure surfaces: stats aggregation and the export builder are
-        // fully deterministic — 100%. barcode's parseOffResponse is fully
-        // covered; the lines below its bar are fetchOffProduct, the network
-        // wrapper exercised on device (same carve-out as src/db/expo.ts).
+        // fully deterministic — 100%. barcode joined them 28 Jul 2026:
+        // fetchOffProduct is now tested against a stubbed fetch (404, offline,
+        // unparseable body all → null), so the file no longer needs a carve-out.
         'src/stats/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/lib/export.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
-        'src/lib/barcode.ts': { statements: 65, branches: 90, functions: 75, lines: 65 },
+        'src/lib/barcode.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/components/a11y.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
       },
     },

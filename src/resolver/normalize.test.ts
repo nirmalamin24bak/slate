@@ -98,4 +98,11 @@ describe('splitEntries', () => {
   it('drops empty segments', () => {
     expect(splitEntries('chai and ')).toEqual(['chai']);
   });
+
+  it('does not split a thousands separator between digits', () => {
+    // The comma in "12,000" is a thousands separator, not a segment break —
+    // splitting it would send "12" and "000 steps" to the resolver.
+    expect(splitEntries('12,000 steps')).toEqual(['12,000 steps']);
+    expect(splitEntries('1,000 kcal aur chai')).toEqual(['1,000 kcal', 'chai']);
+  });
 });

@@ -23,6 +23,7 @@ const poha: Dish = {
   defaultQty: 1,
   isHomeCookable: true,
   cookingFatMl: 5,
+  servingG: null,
   ingredients: [{ ingredient: rice, grams: 60 }],
 };
 
@@ -32,6 +33,7 @@ const banana: Dish = {
   defaultQty: 1,
   isHomeCookable: false,
   cookingFatMl: null,
+  servingG: null,
   ingredients: [
     {
       grams: 100,
