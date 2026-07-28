@@ -106,6 +106,24 @@ floor is now the thinnest margin left.
   from it enters the seed, because its serving basis is undocumented and inconsistent
   (`9ae4f96`).
 
+**The resolver cache, which was not running (28 Jul 2026)**
+
+- **The global cache was write-only.** `resolver-classify` wrote `resolution_cache` and never
+  read it, and migration `...0010` revoked client select — so nothing consumed the table and
+  every user paid a model call for "2 roti" however many times it had been classified before.
+  spec/05 expects a hit rate above 90% within weeks; MASTER calls caching the resolution rather
+  than the nutrition "the architecture". It now looks the key up after the rate check and
+  before the catalogue load and the model call, returning the exact shape the model would have
+  produced so the client re-validates it identically (`5b6c0fa`).
+- Serving a row marks it used (`resolver_cache_touch`, migration `...20260728000002`), because
+  `...0011` evicts by `last_hit_at` — the most popular phrases are the ones served from cache
+  rather than rewritten, so without this they would be reaped first.
+- **The local mirror was unbounded.** Capped at 2,000 rows, evicted by usage, with a read
+  marking the row used. Local schema v3.
+- **Entry ordering was not total.** Two devices logging offline converge on the same
+  `position`, and on a tie SQLite may return either row first — the same day could read in a
+  different order on two devices. Every entry query now tie-breaks on `created_at`, then `id`.
+
 **Release plumbing**
 
 - `eas.json`, CD pipeline, edge-function CI, `docs/app-store-compliance.md`, feature flags
