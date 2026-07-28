@@ -137,6 +137,15 @@ jobs:
     needs: [check, db]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Naming an environment is what lets a human stand between a merge and a
+    # production migration. The gate itself is a repo setting, not a file:
+    # Settings → Environments → production → Required reviewers. Until that is
+    # configured GitHub runs this unguarded, exactly as before — so adding the
+    # key is safe on its own, and setting the reviewers is the actual control.
+    # Migrations here are forward-only and there are no down-migrations; the
+    # recovery path is the backup restore in docs/ops-verification.md, which is
+    # still unverified. Until it is verified, this approval IS the safety net.
+    environment: production
     steps:
       - uses: actions/checkout@v5
 
@@ -211,3 +220,38 @@ jobs:
           supabase functions deploy entitlement-refresh
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      # Nothing checked that a deploy produced a working, still-locked-down
+      # system. The schema could land, the functions could fail to boot, and the
+      # job would be green.
+      #
+      # An unauthenticated POST to every function must be refused. That proves
+      # three things at once: the function deployed, it boots (a function that
+      # crashes on load does not answer 401), and it still requires auth. The
+      # last one is the reason this is worth a step — `verify_jwt` lives in
+      # supabase/config.toml but is applied by the platform, and a function
+      # silently accepting anonymous callers is the worst outcome of a bad
+      # deploy, not the most obvious one.
+      #
+      # resolver-classify / delete-account / entitlement-refresh are rejected by
+      # the gateway (verify_jwt = true). revenuecat-webhook has verify_jwt off by
+      # necessity and rejects on its own shared-secret check. All four: 401.
+      - name: Smoke test the deployed functions
+        run: |
+          set -euo pipefail
+          base="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1"
+          failed=0
+          for fn in resolver-classify delete-account revenuecat-webhook entitlement-refresh; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
+                     -X POST -H 'content-type: application/json' -d '{}' "$base/$fn")
+            if [ "$code" = "401" ]; then
+              echo "  $fn: $code"
+            else
+              echo "::error::$fn answered $code to an unauthenticated POST, expected 401."
+              failed=1
+            fi
+          done
+          [ "$failed" -eq 0 ] || exit 1
+          echo 'All four functions are deployed and refusing unauthenticated callers.'
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
