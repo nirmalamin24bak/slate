@@ -33,6 +33,7 @@ import { BOUNDS, parseBounded } from '@/lib/parseNumeric';
 import { takePendingLine } from '@/lib/pendingLine';
 import { reportError } from '@/lib/report';
 import { services, type Services } from '@/lib/services';
+import { nextSyncDelay } from '@/lib/syncSchedule';
 import {
   iconButtonSize,
   numberMaxFontScale,
@@ -43,8 +44,6 @@ import {
   type,
   useTheme,
 } from '@/theme';
-
-const SYNC_TICK_MS = 30_000;
 
 interface WeightConfirm {
   entryId: string;
@@ -122,7 +121,7 @@ export default function Journal() {
     let disposed = false;
     let unsubscribe: (() => void) | null = null;
     let networkSub: { remove(): void } | null = null;
-    let timer: ReturnType<typeof setInterval> | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     services()
       .then((s) => {
@@ -136,10 +135,27 @@ export default function Journal() {
         networkSub = Network.addNetworkStateListener((state) => {
           if (state.isInternetReachable) void s.syncTick();
         });
-        timer = setInterval(() => {
+        // Audit M5: this was a flat 30-second setInterval that ran a full push
+        // plus four paged selects whether or not anything had changed — ten
+        // round trips a minute for an idle user, and the dominant database load
+        // at scale. A self-rescheduling timeout instead, backing off while
+        // nothing is happening and snapping back to 30s the moment something
+        // is. The midnight rollover still runs on every wake-up, and the other
+        // triggers (network state, app foreground) are unchanged, so a real
+        // edit is never waiting on the backed-off interval alone.
+        let idle = 0;
+        const tick = async () => {
           setToday(dayKey(new Date())); // midnight rollover
-          void s.syncTick();
-        }, SYNC_TICK_MS);
+          let worked = true;
+          try {
+            worked = await s.syncTick();
+          } catch (error: unknown) {
+            reportError(error, { screen: 'journal', op: 'syncTick' });
+          }
+          idle = worked ? 0 : idle + 1;
+          if (!disposed) timer = setTimeout(() => void tick(), nextSyncDelay(idle));
+        };
+        timer = setTimeout(() => void tick(), nextSyncDelay(0));
       })
       .catch((error: unknown) => reportError(error, { screen: 'journal', op: 'boot' }));
 
@@ -147,7 +163,7 @@ export default function Journal() {
       disposed = true;
       unsubscribe?.();
       networkSub?.remove();
-      if (timer) clearInterval(timer);
+      if (timer) clearTimeout(timer);
     };
   }, []);
 

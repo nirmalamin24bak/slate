@@ -100,7 +100,7 @@ export async function pushDirty(
   adapter: SqlAdapter,
   remote: RemoteDb,
   ownerId?: string,
-): Promise<void> {
+): Promise<number> {
   const owns = (row: { user_id: string }) => ownerId === undefined || row.user_id === ownerId;
 
   // Each table: read the dirty snapshot (with updated_at), push over the
@@ -171,6 +171,11 @@ export async function pushDirty(
       kitchen.updated_at,
     ]);
   }
+
+  // How many rows actually went over the wire. The caller uses it to decide
+  // whether this tick was worth anything (audit M5): a tick that moved nothing
+  // is a tick the schedule can back off from.
+  return entries.length + weights.length + (profile ? 1 : 0) + (kitchen ? 1 : 0);
 }
 
 // --- delta-sync cursor (local bookkeeping in the `meta` k/v table) ---
@@ -296,13 +301,14 @@ async function pullTable(
   table: string,
   userId: string,
   merge: (rows: Record<string, SqlValue>[]) => Promise<void>,
-): Promise<void> {
+): Promise<number> {
   const keyColumn = KEY_COLUMN[table] ?? 'id';
   const cursor = await getCursor(adapter, table, userId);
   const rows = await remote.fetchOwned(table, userId, cursor, keyColumn);
   await adapter.transaction(() => merge(rows));
   const next = cursorOf(rows, keyColumn);
   if (next !== null) await setCursor(adapter, table, userId, next);
+  return rows.length;
 }
 
 /**
@@ -321,13 +327,23 @@ export async function pullUserData(
   adapter: SqlAdapter,
   remote: RemoteDb,
   userId: string,
-): Promise<void> {
-  await pullTable(adapter, remote, 'entries', userId, (rows) => pullMergeEntries(adapter, rows));
-  await pullTable(adapter, remote, 'weights', userId, (rows) => pullMergeWeights(adapter, rows));
-  await pullTable(adapter, remote, 'profiles', userId, (rows) =>
+): Promise<number> {
+  // Summed rather than short-circuited: every table still gets its delta, and
+  // the total is what tells the caller whether this tick was idle (audit M5).
+  let pulled = 0;
+  pulled += await pullTable(adapter, remote, 'entries', userId, (rows) =>
+    pullMergeEntries(adapter, rows),
+  );
+  pulled += await pullTable(adapter, remote, 'weights', userId, (rows) =>
+    pullMergeWeights(adapter, rows),
+  );
+  pulled += await pullTable(adapter, remote, 'profiles', userId, (rows) =>
     pullMergeProfile(adapter, rows[0]),
   );
-  await pullTable(adapter, remote, 'kitchen', userId, (rows) => pullMergeKitchen(adapter, rows[0]));
+  pulled += await pullTable(adapter, remote, 'kitchen', userId, (rows) =>
+    pullMergeKitchen(adapter, rows[0]),
+  );
+  return pulled;
 }
 
 /** Refresh the reference mirrors. Called on app start when online; failures are non-fatal. */

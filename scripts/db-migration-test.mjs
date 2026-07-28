@@ -722,6 +722,27 @@ try {
     2,
   );
 
+  // M4 — devices skip the reference pull unless this moves. Assert the column
+  // exists and is monotonic-friendly; the deploy job is what bumps it.
+  check(
+    'app_config carries a reference_version',
+    scalar(`select reference_version from app_config where id = 1`),
+    1,
+  );
+  check(
+    'reference_version is readable by a client (it gates their pull)',
+    scalarAs(USER_A, `select reference_version from app_config where id = 1;`),
+    1,
+  );
+  check(
+    'reference_version is still not writable by a client',
+    scalarAs(
+      USER_A,
+      `with u as (update app_config set reference_version = 99 where id = 1 returning 1) select count(*) from u;`,
+    ),
+    0,
+  );
+
   console.log('');
   if (failures.length > 0) {
     console.error(`✗ ${failures.length} check(s) failed: ${failures.join(', ')}`);

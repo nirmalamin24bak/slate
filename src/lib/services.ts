@@ -22,7 +22,7 @@ import { configureAnalytics, confidenceBucket, track } from './analytics';
 import { refreshServerEntitlement } from './entitlementSync';
 import { newId } from './ids';
 import { getRemoteConfig, refreshRemoteConfig } from './remoteConfig';
-import { reportError } from './report';
+import { configureReporting, reportError } from './report';
 import { recordSyncFailure, recordSyncSuccess } from './syncHealth';
 import { configurePurchases } from './revenuecat';
 import { supabase, ensureAnonymousSession } from './supabase';
@@ -103,6 +103,47 @@ const supabaseRemote: RemoteDb = {
   },
 };
 
+const REFERENCE_VERSION_KEY = 'reference_version';
+
+/**
+ * Mirror the reference tables, but only when the server says they changed
+ * (audit M4).
+ *
+ * The order matters and is the whole point: ask remote config FIRST — one row,
+ * a few bytes — and only then decide whether to move megabytes. A device on an
+ * unchanged catalogue, which is every device on almost every launch, pays for
+ * one small select and nothing else.
+ *
+ * Errs towards refreshing: an unreachable config leaves the version at 0, which
+ * never equals a real one, so the failure mode is a redundant pull rather than a
+ * silently stale mirror. A stale mirror shows a user wrong calories; a redundant
+ * pull just costs bandwidth.
+ */
+async function refreshReferenceIfStale(adapter: SqlAdapter): Promise<void> {
+  await refreshRemoteConfig(supabase);
+  const serverVersion = getRemoteConfig().referenceVersion;
+
+  const row = await adapter.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', [
+    REFERENCE_VERSION_KEY,
+  ]);
+  const localVersion = Number(row?.value ?? NaN);
+  if (Number.isFinite(localVersion) && localVersion === serverVersion && serverVersion > 0) {
+    return; // already current: transfer nothing
+  }
+
+  await pullReference(adapter, supabaseRemote);
+
+  // Recorded only after a successful mirror, so an interrupted pull is retried
+  // on the next launch rather than being remembered as done.
+  if (serverVersion > 0) {
+    await adapter.run(
+      `INSERT INTO meta (key, value) VALUES (?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+      [REFERENCE_VERSION_KEY, String(serverVersion)],
+    );
+  }
+}
+
 /**
  * The one place a resolved line becomes a product event. Both numbers the
  * week-8 dashboard is built on come from here: `unresolved_rate` and resolver
@@ -139,8 +180,13 @@ export interface Services {
   adapter: SqlAdapter;
   store: JournalStore;
   userId: string;
-  /** drain the retry queue + push dirty rows; safe to call on any tick */
-  syncTick(): Promise<void>;
+  /**
+   * Drain the retry queue + push dirty rows. Safe to call on any tick.
+   * Resolves true when the tick moved data (or failed and should be retried
+   * promptly), false when there was genuinely nothing to do — which is what
+   * lets the caller back the schedule off (audit M5, src/lib/syncSchedule.ts).
+   */
+  syncTick(): Promise<boolean>;
   /** re-read the authoritative entitlement row (call on app foreground) */
   refreshEntitlement(): Promise<void>;
 }
@@ -148,6 +194,11 @@ export interface Services {
 let servicesPromise: Promise<Services> | null = null;
 
 async function build(): Promise<Services> {
+  // First, so a crash in the rest of boot is the kind that gets reported. Takes
+  // no user id: a crash does not need one, and reporting must work before the
+  // anonymous session exists (spec/09 — offline install is a specced case).
+  configureReporting();
+
   const adapter = await openDatabase();
 
   await ensureAnonymousSession();
@@ -171,13 +222,21 @@ async function build(): Promise<Services> {
     void refreshRemoteConfig(supabase); // breach banner + resolver flag
   }
 
-  // Reference mirrors: refresh best-effort; a stale mirror still works and
-  // an empty one degrades lines to unresolved, honestly.
-  try {
-    await pullReference(adapter, supabaseRemote);
-  } catch (error) {
-    reportError(error, { op: 'pullReference' });
-  }
+  // Reference mirrors: NOT awaited (audit M4). This used to block boot on four
+  // unfiltered `select *` calls over ingredients, dishes, dish_ingredients,
+  // exercises and packaged_foods — the whole tables, every launch, with no
+  // version check. At the target catalogue size that is a multi-MB download
+  // between tapping the icon and being able to type, which is the one thing
+  // CLAUDE.md says is always wrong, and it is Supabase egress billed per launch
+  // per user forever.
+  //
+  // Now it runs in the background and only when the server says the reference
+  // data actually changed. A device that is already current transfers nothing.
+  // The mirror it already has is what the journal reads from meanwhile; an empty
+  // one degrades lines to unresolved, honestly, exactly as before.
+  void refreshReferenceIfStale(adapter).catch((error: unknown) =>
+    reportError(error, { op: 'pullReference' }),
+  );
 
   // User data down-sync (spec/04): hydrate this device from the server so a
   // reinstall or a second device shows the full journal instead of nothing.
@@ -253,27 +312,36 @@ async function build(): Promise<Services> {
       return currentUserId;
     },
     async syncTick() {
-      if (isSyncing) return; // B3: a tick is already running; it covers this one.
+      // B3: a tick is already running; it covers this one. Reported as "work
+      // happened" so a concurrent caller never causes a back-off.
+      if (isSyncing) return true;
       isSyncing = true;
       try {
         await store.drainDue();
         await ensureAdopted();
         if (currentUserId !== PENDING_USER_ID) {
           try {
-            await pushDirty(adapter, supabaseRemote, currentUserId);
+            const pushed = await pushDirty(adapter, supabaseRemote, currentUserId);
             // Pull after push so a multi-device edit converges the same tick.
-            await pullUserData(adapter, supabaseRemote, currentUserId);
-            store.emitChange();
+            const pulled = await pullUserData(adapter, supabaseRemote, currentUserId);
+            // Only tell the UI to re-read when something actually moved; an
+            // idle tick used to re-render the journal every 30 seconds for
+            // nothing.
+            if (pushed + pulled > 0) store.emitChange();
             // B4: a full push+pull got through — data is reaching the server.
             recordSyncSuccess(Date.now());
+            return pushed + pulled > 0;
           } catch (error) {
             // B4: don't just swallow into a prod no-op. Count the failure so a
             // permanently-stuck (e.g. poison-row) sync surfaces as "not backed
             // up" instead of silently losing data on reinstall.
             reportError(error, { op: 'syncTick' });
             recordSyncFailure();
+            // A failure is not idleness: stay on the fast schedule and retry.
+            return true;
           }
         }
+        return false;
       } finally {
         isSyncing = false;
       }

@@ -209,6 +209,15 @@ jobs:
             echo "applying $f"
             psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$f"
           done
+          # Tell devices the reference data moved (audit M4). Clients mirror the
+          # reference tables only when this differs from the version they hold,
+          # so an unchanged catalogue costs them one small row read instead of a
+          # multi-MB pull on every launch. It lives here rather than in a
+          # migration because it must bump whenever the SEED is applied, which is
+          # every deploy, not only when a migration happens to run.
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+            -c 'update app_config set reference_version = reference_version + 1, updated_at = now() where id = 1;'
+          echo "reference_version bumped"
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
