@@ -1,27 +1,37 @@
 # Phase 7 — Production harden: punch list (the honest gate)
 
-Status: **code gate green, PR open, launch gate NOT met.** Phase 7 closes the code half of
-production readiness. It does not close launch. Everything that turns this code into a
-shippable product is listed under "Blocked" below, and the first item there is the one that
-decides the schedule.
+Status: **code gate green locally and now on CI too, PR open, launch gate NOT met.** Phase 7
+closes the code half of production readiness. It does not close launch. Everything that turns
+this code into a shippable product is listed under "Blocked" below, and the first item there
+is the one that decides the schedule.
 
-Branch: `phase-7-production-harden`, 28 commits ahead of `main`, fast-forwards cleanly.
-PR: [#4](https://github.com/nirmalamin24bak/slate/pull/4). 93 files, +6606/-428.
+Branch: `phase-7-production-harden`, 32 commits ahead of `main`, fast-forwards cleanly.
+PR: [#4](https://github.com/nirmalamin24bak/slate/pull/4).
 
 Gate re-run 2026-07-28 (the branch had sat idle since 13 Jul):
 
 - `tsc --noEmit` clean
 - `eslint .` clean
-- `vitest run --coverage` — **427 passed / 2 skipped**, every per-glob threshold holds
-  (statements 96.78%, branches 88.05%, functions 97%, lines 97.89%)
+- `vitest run --coverage` — **439 passed / 2 skipped**, every per-glob threshold holds
+  (statements 98.01%, branches 89.30%, functions 98.50%, lines 99%)
+
+**Correction to the first version of this page:** it claimed the code gate was green while
+PR #4's `check` job was in fact red, and had been since the job was added. `deno check` could
+not resolve `npm:@anthropic-ai/sdk` — the repo root's package.json put Deno into node_modules
+resolution, where a server-only SDK the Expo app never installs cannot be found. Fixed in
+`d83deba` with `supabase/functions/deno.json` (`nodeModulesDir: "none"`, which is also the
+truthful production setting) and an explicit `--config` in CI. Verified locally with deno
+2.5.4 before pushing. The lesson: a local gate run is not the gate.
 
 The 2 skipped are the opt-in integration gates, by design: `test/resolver-eval.test.ts`
 (needs `RESOLVER_EVAL=1` and a model key) and the RLS cross-user gate (needs `RLS_TEST=1`
 and applied migrations). Both are blockers in their own right — see below.
 
-Two thresholds now pass by a hair and should be watched, not celebrated:
-`src/db/**` branches at 75.19% against a 75% floor, and `src/lib/barcode.ts` functions at
-exactly 75% against a 75% floor. The next uncovered branch in either place fails CI.
+The two hair's-breadth thresholds are fixed, not watched (`e93e3f7`): the down-sync merges'
+sparse-payload fallbacks and `fetchOffProduct` are now tested, taking `src/db` branches from
+75.19% to 81.40% and `barcode.ts` to 100% on all four metrics. Floors raised under the real
+numbers (`src/db` 95/80/95/98, barcode 100). `src/journal` branches at 79.11% against a 78%
+floor is now the thinnest margin left.
 
 ---
 
@@ -120,35 +130,45 @@ These are ordered by what actually decides the schedule.
    Nirmal owns it and it is not delegable to a model. Resolver accuracy,
    `unresolved_rate`, and day-7 retention are all capped by this number. At 50 dishes a real
    user in Vadodara hits `unresolved` inside their first few lines. This is the schedule.
-2. **The resolver has never run live.** `RESOLVER_PROVIDER_API_KEY` is empty,
+2. **Nothing applies the reference data to production — found 28 Jul 2026.** `supabase/seed/`
+   holds a generated, idempotent `01_ingredients.sql` (549 rows), but no code path applies it:
+   `supabase db push` runs migrations only, and a `seed.sql` is a local-reset artifact that
+   never touches a remote project. There is also **no dish or exercise seed SQL at all** — the
+   50 dishes and 20 exercises exist only as `.draft.json`. So on the current deploy path
+   production would come up with an empty `ingredients`, `dishes`, and `exercises`, and every
+   food line would fail to resolve regardless of how good the resolver is. Needs a generator
+   for `02_dishes.sql` / `03_exercises.sql` and an apply step (a `psql -f` against
+   `SUPABASE_DB_URL` in the deploy job is the straightforward one; the `01_`/`02_` naming
+   already implies an ordered apply). Started but not built — this is the next code task.
+3. **The resolver has never run live.** `RESOLVER_PROVIDER_API_KEY` is empty,
    `resolver-classify` is not deployed, and the Phase-2 gate (≥90% intent accuracy,
    `unresolved_rate` < 5%, zero confident-wrong-ref) has never been measured. Separately,
    the 500-line gold set is model-drafted — `test/eval/README.md` states the gate number is
    not valid until Nirmal has corrected every label, and lists ~10 labelling conventions
    awaiting his ruling. Correct the eval set and the dish table together; they are coupled
    by dish ids.
-3. **No build exists.** `app.json` has no `extra.eas.projectId` (`eas init` never run) and
+4. **No build exists.** `app.json` has no `extra.eas.projectId` (`eas init` never run) and
    `eas.json`'s submit block still holds `REPLACE_WITH_*` for the Apple ID, App Store
    Connect app id, and team id. Confirm the Apple Developer org is verified first — it was
    D-U-N-S pending at Week 0.
-4. **RevenueCat key empty.** Products `slate_monthly_199` / `slate_yearly_1499`, the
+5. **RevenueCat key empty.** Products `slate_monthly_199` / `slate_yearly_1499`, the
    webhook, and `Purchases.logIn(supabaseUserId)` are all coded, but no purchase has ever
    been made.
-5. **PostHog key empty**, and `src/lib/report.ts` still carries the two `TODO(C1)` capture
+6. **PostHog key empty**, and `src/lib/report.ts` still carries the two `TODO(C1)` capture
    sites. PR #2 is an unmerged draft. Consequence: the week-8 `unresolved_rate` and
    resolver-p95 dashboard does not exist, so the only question that matters after TestFlight
    — did anyone log on day 7 — is currently unanswerable.
-6. **Privacy policy unpublished** (`docs/privacy-policy-draft.md`): counsel review, plus two
+7. **Privacy policy unpublished** (`docs/privacy-policy-draft.md`): counsel review, plus two
    open placeholders — the resolver model-provider name, and the DPDP §11/§12/§13 citations
    against the notified Rules. Grievance officer not yet named.
-7. **`docs/ops-verification.md` is entirely unchecked** — daily backups, PITR decision, one
+8. **`docs/ops-verification.md` is entirely unchecked** — daily backups, PITR decision, one
    test restore, `pg_cron` present, reap job active, reaper `EXECUTE` revoked. The test
    restore is the highest-value item on that page. A backup never restored is a hope.
-8. **Breach playbook** (`docs/breach-playbook.md`) needs the named decision-owner and
+9. **Breach playbook** (`docs/breach-playbook.md`) needs the named decision-owner and
    deputy. **App Store listing** (`docs/app-store-listing.md`) needs final wording.
-9. **SQLite / AsyncStorage at-rest encryption decision**, carried from Phase 5, DPDP.
-   Decide with counsel.
-10. **Edge Function deploys**: `resolver-classify`, `delete-account`, `revenuecat-webhook`,
+10. **SQLite / AsyncStorage at-rest encryption decision**, carried from Phase 5, DPDP.
+    Decide with counsel.
+11. **Edge Function deploys**: `resolver-classify`, `delete-account`, `revenuecat-webhook`,
     `entitlement-refresh`. All authored, none deployed.
 
 ## Tracked, not blocking
@@ -161,12 +181,11 @@ These are ordered by what actually decides the schedule.
   with no dry-run gate and no tested rollback. Before a risky migration, apply to a branch
   DB first. A migration-test harness in CI is the follow-up (noted in
   `docs/ops-verification.md` §3).
-- **Eight `FLAG(nirmal)` decisions in `src/`**: where exactly the 1,200 floor binds intraday
-  (`journal/compose.ts`), decoction milk type (`engine/kitchen.ts`), surya-namaskar
-  rounds→minutes, share copy and App Store URL (`components/Drawer.tsx`), unitless
-  first-person mass assuming kg (`resolver/localRules.ts`), stats trailing-window edge
-  (`stats/aggregate.ts`). None block launch; all should be ruled before the listing is
-  final.
+- **Every open `FLAG(nirmal)` is now collected in [`founder-rulings.md`](founder-rulings.md)**
+  with the value the code carries today, the argument, and the exact edit that applies a
+  ruling — grouped into the two that gate launch (resolver provider's DPDP terms, the
+  placeholder URLs), eight product rulings, five rate/budget numbers to bless, and four stubs
+  that need a spec rather than a ruling. Reply with an item number to close one.
 - **Seed filenames still say `.draft`**. Deliberate: the resolver eval case set is still
   uncorrected, so renaming the seeds would churn the eval harness mid-flight. Rename once
   the eval set is corrected.
