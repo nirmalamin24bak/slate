@@ -21,6 +21,8 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+import { log } from '../_shared/log.ts';
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const webhookSecret = Deno.env.get('REVENUECAT_WEBHOOK_SECRET')!;
@@ -97,23 +99,51 @@ async function upsertEntitlement(userId: string, active: boolean, e: RcEvent): P
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return json(405, { error: 'method not allowed' });
+  // Audit C8. This function is the one where silence has a name attached: a
+  // failed upsert returns 500 and leans entirely on RevenueCat's retry policy,
+  // and when RC finally gives up the event is gone and a PAYING CUSTOMER
+  // silently reads as free. Nothing recorded that. Every `upsert failed` below
+  // is now an error line naming the user and the event type, which is enough to
+  // reconstruct and replay the grant by hand.
+  const startedAt = Date.now();
+  const done = (
+    status: number,
+    body: unknown,
+    fields: { outcome: string; user?: string; event?: string },
+  ) => {
+    log('revenuecat-webhook', status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info', {
+      ...fields,
+      status,
+      ms: Date.now() - startedAt,
+    });
+    return json(status, body);
+  };
+
+  if (req.method !== 'POST') {
+    return done(405, { error: 'method not allowed' }, { outcome: 'method_not_allowed' });
+  }
 
   const auth = req.headers.get('Authorization') ?? '';
-  if (!timingSafeEqual(auth, webhookSecret)) return json(401, { error: 'unauthorized' });
+  // Warn, not info: the only callers who reach here are RevenueCat and someone
+  // guessing the shared secret. A run of these is worth an alert.
+  if (!timingSafeEqual(auth, webhookSecret)) {
+    return done(401, { error: 'unauthorized' }, { outcome: 'bad_secret' });
+  }
 
   let e: RcEvent;
   try {
     const body = await req.json();
     e = body?.event;
   } catch {
-    return json(400, { error: 'invalid body' });
+    return done(400, { error: 'invalid body' }, { outcome: 'invalid_body' });
   }
   // Anything unactionable returns 200 so RC does not retry-storm: TEST pings,
   // events before logIn (app_user_id is RC's own anon id, not a uuid we can map).
-  if (!e || e.type === 'TEST') return json(200, { ok: true });
+  if (!e || e.type === 'TEST') return done(200, { ok: true }, { outcome: 'ignored_test' });
   const userId = e.app_user_id ?? '';
-  if (!UUID_RE.test(userId)) return json(200, { ok: true });
+  if (!UUID_RE.test(userId)) {
+    return done(200, { ok: true }, { outcome: 'unmapped_user', event: e.type });
+  }
 
   // TRANSFER moves the entitlement between app_user_ids; revoke the sources.
   if (e.type === 'TRANSFER') {
@@ -121,14 +151,28 @@ Deno.serve(async (req) => {
       if (UUID_RE.test(from)) await upsertEntitlement(from, false, e);
     }
     const ok = await upsertEntitlement(userId, true, e);
-    return ok ? json(200, { ok: true }) : json(500, { error: 'upsert failed' });
+    return ok
+      ? done(200, { ok: true }, { outcome: 'applied', user: userId, event: e.type })
+      : done(
+          500,
+          { error: 'upsert failed' },
+          { outcome: 'upsert_failed', user: userId, event: e.type },
+        );
   }
 
   const grantsPlus =
     (e.entitlement_ids ?? []).includes(ENTITLEMENT_ID) || e.entitlement_id === ENTITLEMENT_ID;
   const target = activeFor(e.type);
-  if (target === 'keep') return json(200, { ok: true }); // don't flip on ambiguous events
+  if (target === 'keep') {
+    return done(200, { ok: true }, { outcome: 'ignored_ambiguous', user: userId, event: e.type });
+  }
 
   const ok = await upsertEntitlement(userId, grantsPlus ? target : false, e);
-  return ok ? json(200, { ok: true }) : json(500, { error: 'upsert failed' });
+  return ok
+    ? done(200, { ok: true }, { outcome: 'applied', user: userId, event: e.type })
+    : done(
+        500,
+        { error: 'upsert failed' },
+        { outcome: 'upsert_failed', user: userId, event: e.type },
+      );
 });

@@ -18,6 +18,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
 
+import { errorKind, log } from '../_shared/log.ts';
+import type { LogFields } from '../_shared/log.ts';
 import { buildSystemPrompt } from './prompt.ts';
 import type { Catalogue } from './prompt.ts';
 import { providerFromEnv } from './providers.ts';
@@ -222,7 +224,22 @@ function json(status: number, body: unknown): Response {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return json(405, { error: 'method not allowed' });
+  // Audit C8: every exit below is logged. `done` keeps that from being a dozen
+  // hand-written console lines that drift out of step with the statuses they
+  // claim — the response and the log line are produced together or not at all.
+  const startedAt = Date.now();
+  const done = (status: number, body: unknown, fields: Omit<LogFields, 'status' | 'ms'>) => {
+    log('resolver-classify', status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info', {
+      ...fields,
+      status,
+      ms: Date.now() - startedAt,
+    });
+    return json(status, body);
+  };
+
+  if (req.method !== 'POST') {
+    return done(405, { error: 'method not allowed' }, { outcome: 'method_not_allowed' });
+  }
 
   // Resolve the caller. The gateway already verified the JWT; getUser() gives
   // us the uid for rate limiting and rejects anything else.
@@ -232,7 +249,10 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
   const { data: userData, error: userError } = await asCaller.auth.getUser();
-  if (userError || !userData.user) return json(401, { error: 'unauthorized' });
+  if (userError || !userData.user) {
+    return done(401, { error: 'unauthorized' }, { outcome: 'unauthorized' });
+  }
+  const user = userData.user.id;
 
   // Server-authoritative Plus (plan B2). A spoofed client flag grants nothing
   // that costs money: this reads the entitlements table with the service role
@@ -244,27 +264,40 @@ Deno.serve(async (req) => {
   // accounts could exhaust the day's ceiling and 429 every paying subscriber.
   // It now selects the budget pool (migration ...20260729000001), and Plus draws
   // from a reserve free traffic cannot reach.
-  const isPlus = await callerIsPlus(userData.user.id);
+  const isPlus = await callerIsPlus(user);
 
   let body: z.infer<typeof BodySchema>;
   try {
     body = BodySchema.parse(await req.json());
   } catch {
-    return json(400, { error: 'invalid input' });
+    return done(400, { error: 'invalid input' }, { outcome: 'invalid_input', user, plus: isPlus });
   }
 
   // Kill switch before any spend: refuse cheaply, before the rate RPC and the
   // model call. Clients treat 503 as a signal to fall back, not to retry.
-  if (resolverDisabled()) return json(503, { error: 'resolver disabled' });
+  if (resolverDisabled()) {
+    return done(503, { error: 'resolver disabled' }, { outcome: 'disabled', user, plus: isPlus });
+  }
 
   const { data: allowed, error: rateError } = await service.rpc('resolver_rate_check', {
-    p_user: userData.user.id,
+    p_user: user,
     p_limit: RATE_LIMIT_PER_MINUTE,
     p_window_seconds: 60,
     p_plus: isPlus,
   });
-  if (rateError) return json(500, { error: 'rate check failed' });
-  if (!allowed) return json(429, { error: 'rate limited' });
+  if (rateError) {
+    return done(
+      500,
+      { error: 'rate check failed' },
+      { outcome: 'rate_check_failed', user, plus: isPlus },
+    );
+  }
+  // Logged at warn, because this is either a user hammering the endpoint or the
+  // daily pool running out — and the second one is a business event, not a user
+  // one. It is the signal an alert should watch (audit C3).
+  if (!allowed) {
+    return done(429, { error: 'rate limited' }, { outcome: 'rate_limited', user, plus: isPlus });
+  }
 
   // Cache before spend: after the rate check (so a script cannot hammer the
   // cache for free) but before the catalogue load and the model call. A hit
@@ -272,7 +305,18 @@ Deno.serve(async (req) => {
   // the daily model budget, which counts served model calls only (...0004).
   try {
     const cached = await cacheLookup(body.line);
-    if (cached) return json(200, { reply: cached, source: 'cache' });
+    if (cached) {
+      return done(
+        200,
+        { reply: cached, source: 'cache' },
+        {
+          outcome: 'ok',
+          user,
+          plus: isPlus,
+          source: 'cache',
+        },
+      );
+    }
   } catch {
     // A cache failure must never fail a request the model can still answer.
   }
@@ -280,15 +324,43 @@ Deno.serve(async (req) => {
   try {
     const system = await systemPrompt();
     const provider = providerFromEnv();
-    const reply = await provider.complete(system, body.line, AbortSignal.timeout(MODEL_TIMEOUT_MS));
+    const { text: reply, usage } = await provider.complete(
+      system,
+      body.line,
+      AbortSignal.timeout(MODEL_TIMEOUT_MS),
+    );
 
     // Fire-and-forget would risk the isolate freezing before the write lands;
     // await it, but never let it fail the request.
-    await maybeCacheWrite(userData.user.id, body.line, reply).catch(() => undefined);
+    await maybeCacheWrite(user, body.line, reply).catch(() => undefined);
 
-    return json(200, { reply });
+    // The only line that costs money, and now the only one that says how much.
+    // cachedTokens vs inputTokens is the health of the prompt cache: if it stops
+    // being most of the total, cost has regressed with nothing else looking wrong.
+    return done(
+      200,
+      { reply },
+      {
+        outcome: 'ok',
+        user,
+        plus: isPlus,
+        source: 'model',
+        inputTokens: usage.inputTokens,
+        cachedTokens: usage.cachedInputTokens,
+        outputTokens: usage.outputTokens,
+      },
+    );
   } catch (error) {
     const status = error instanceof DOMException && error.name === 'TimeoutError' ? 504 : 502;
-    return json(status, { error: 'classify failed' });
+    return done(
+      status,
+      { error: 'classify failed' },
+      {
+        outcome: 'classify_failed',
+        user,
+        plus: isPlus,
+        errorKind: errorKind(error),
+      },
+    );
   }
 });

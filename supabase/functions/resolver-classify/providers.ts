@@ -10,9 +10,30 @@
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
 
+/**
+ * What one call cost. The daily ceiling in migration ...20260729000001 counts
+ * CALLS, and a call's price is dominated by the catalogue in the system prompt —
+ * so calls alone cannot tell anyone whether the ceiling maps to the money they
+ * think it does. These are the numbers that answer that (audit C1/C8).
+ *
+ * `cachedInputTokens` is the part served from the provider's prompt cache rather
+ * than billed fresh; it is the direct measure of whether the cache_control
+ * breakpoint is doing its job. If it stops being most of `inputTokens`, cost has
+ * regressed even though nothing looks broken.
+ */
+export interface ModelUsage {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+}
+
 export interface ModelProvider {
-  /** One classification call. Returns the raw reply text. */
-  complete(system: string, line: string, signal: AbortSignal): Promise<string>;
+  /** One classification call. Returns the raw reply text and what it cost. */
+  complete(
+    system: string,
+    line: string,
+    signal: AbortSignal,
+  ): Promise<{ text: string; usage: ModelUsage }>;
 }
 
 function anthropicProvider(apiKey: string, model: string): ModelProvider {
@@ -41,7 +62,18 @@ function anthropicProvider(apiKey: string, model: string): ModelProvider {
         { signal },
       );
       const text = response.content.find((block) => block.type === 'text');
-      return text && 'text' in text ? text.text : '';
+      const u = response.usage;
+      return {
+        text: text && 'text' in text ? text.text : '',
+        usage: {
+          // input_tokens excludes the cached read on Anthropic; add it back so
+          // inputTokens is the honest total the prompt cost to send, and
+          // cachedInputTokens is the share that was not billed at full rate.
+          inputTokens: (u?.input_tokens ?? 0) + (u?.cache_read_input_tokens ?? 0),
+          cachedInputTokens: u?.cache_read_input_tokens ?? 0,
+          outputTokens: u?.output_tokens ?? 0,
+        },
+      };
     },
   };
 }

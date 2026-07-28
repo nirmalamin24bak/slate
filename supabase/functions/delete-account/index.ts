@@ -17,6 +17,8 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+import { log } from '../_shared/log.ts';
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -33,7 +35,23 @@ function json(status: number, body: unknown): Response {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return json(405, { error: 'method not allowed' });
+  // Audit C8. An erasure is irreversible and has no recovery path, so both
+  // outcomes need a record: a completed one so the operation is evidenced
+  // outside the database it just cascaded through, and a failed one so a user
+  // who was told "delete failed" can be believed.
+  const startedAt = Date.now();
+  const done = (status: number, body: unknown, fields: { outcome: string; user?: string }) => {
+    log('delete-account', status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info', {
+      ...fields,
+      status,
+      ms: Date.now() - startedAt,
+    });
+    return json(status, body);
+  };
+
+  if (req.method !== 'POST') {
+    return done(405, { error: 'method not allowed' }, { outcome: 'method_not_allowed' });
+  }
 
   const authHeader = req.headers.get('Authorization') ?? '';
   const asCaller = createClient(supabaseUrl, anonKey, {
@@ -41,7 +59,9 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
   const { data: userData, error: userError } = await asCaller.auth.getUser();
-  if (userError || !userData.user) return json(401, { error: 'unauthorized' });
+  if (userError || !userData.user) {
+    return done(401, { error: 'unauthorized' }, { outcome: 'unauthorized' });
+  }
 
   // Require an explicit confirmation flag in the body. A bare POST with just a
   // (possibly stolen) token and no body will not wipe an account by accident.
@@ -54,7 +74,16 @@ Deno.serve(async (req) => {
   } catch {
     confirmed = false;
   }
-  if (!confirmed) return json(400, { error: 'confirmation required' });
+  if (!confirmed) {
+    return done(
+      400,
+      { error: 'confirmation required' },
+      {
+        outcome: 'unconfirmed',
+        user: userData.user.id,
+      },
+    );
+  }
 
   // Audit BEFORE the delete: the append-only row must exist even if the delete
   // then fails, and it survives the cascade (no FK to auth.users).
@@ -66,12 +95,24 @@ Deno.serve(async (req) => {
   const { error: auditError } = await service
     .from('account_deletions')
     .insert({ user_id: userData.user.id, source: 'edge' });
-  if (auditError) return json(500, { error: 'delete failed' });
+  if (auditError) {
+    return done(
+      500,
+      { error: 'delete failed' },
+      { outcome: 'audit_failed', user: userData.user.id },
+    );
+  }
 
   // The uid comes from the verified token, never the body — a caller can only
   // delete themselves.
   const { error } = await service.auth.admin.deleteUser(userData.user.id);
-  if (error) return json(500, { error: 'delete failed' });
+  if (error) {
+    return done(
+      500,
+      { error: 'delete failed' },
+      { outcome: 'delete_failed', user: userData.user.id },
+    );
+  }
 
-  return json(200, { deleted: true });
+  return done(200, { deleted: true }, { outcome: 'deleted', user: userData.user.id });
 });

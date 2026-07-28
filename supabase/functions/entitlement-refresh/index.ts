@@ -7,6 +7,8 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+import { log } from '../_shared/log.ts';
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -31,7 +33,27 @@ interface RcSubscriber {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') return json(405, { error: 'method not allowed' });
+  // Audit C8. This is the reconciliation path a user reaches when the app says
+  // free and they have paid, so its failures are support tickets by another
+  // name — and 'revenuecat unreachable' in particular is an outage of someone
+  // else's service that nobody here would otherwise notice.
+  const startedAt = Date.now();
+  const done = (
+    status: number,
+    body: unknown,
+    fields: { outcome: string; user?: string; plus?: boolean },
+  ) => {
+    log('entitlement-refresh', status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info', {
+      ...fields,
+      status,
+      ms: Date.now() - startedAt,
+    });
+    return json(status, body);
+  };
+
+  if (req.method !== 'POST') {
+    return done(405, { error: 'method not allowed' }, { outcome: 'method_not_allowed' });
+  }
 
   const authHeader = req.headers.get('Authorization') ?? '';
   const asCaller = createClient(supabaseUrl, anonKey, {
@@ -39,7 +61,9 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
   const { data: userData, error: userError } = await asCaller.auth.getUser();
-  if (userError || !userData.user) return json(401, { error: 'unauthorized' });
+  if (userError || !userData.user) {
+    return done(401, { error: 'unauthorized' }, { outcome: 'unauthorized' });
+  }
   const userId = userData.user.id;
 
   // M2: per-user cooldown before the outbound RC call, so an authenticated
@@ -50,8 +74,16 @@ Deno.serve(async (req) => {
     p_user: userId,
     p_cooldown_seconds: 30,
   });
-  if (rateError) return json(500, { error: 'rate check failed' });
-  if (allowed === false) return json(429, { error: 'slow down' });
+  if (rateError) {
+    return done(
+      500,
+      { error: 'rate check failed' },
+      { outcome: 'rate_check_failed', user: userId },
+    );
+  }
+  if (allowed === false) {
+    return done(429, { error: 'slow down' }, { outcome: 'cooldown', user: userId });
+  }
 
   // Ask RevenueCat for this subscriber's authoritative state.
   let sub: RcSubscriber;
@@ -59,10 +91,20 @@ Deno.serve(async (req) => {
     const res = await fetch(`https://api.revenuecat.com/v1/subscribers/${userId}`, {
       headers: { Authorization: `Bearer ${rcSecretKey}` },
     });
-    if (!res.ok) return json(502, { error: 'revenuecat unreachable' });
+    if (!res.ok) {
+      return done(
+        502,
+        { error: 'revenuecat unreachable' },
+        { outcome: 'rc_http_error', user: userId },
+      );
+    }
     sub = await res.json();
   } catch {
-    return json(502, { error: 'revenuecat unreachable' });
+    return done(
+      502,
+      { error: 'revenuecat unreachable' },
+      { outcome: 'rc_unreachable', user: userId },
+    );
   }
 
   const ent = sub.subscriber?.entitlements?.[ENTITLEMENT_ID];
@@ -103,7 +145,13 @@ Deno.serve(async (req) => {
     p_event_id: null,
     p_event_ts_ms: Date.now(),
   });
-  if (error) return json(500, { error: 'upsert failed' });
+  if (error) {
+    return done(
+      500,
+      { error: 'upsert failed' },
+      { outcome: 'upsert_failed', user: userId, plus: active },
+    );
+  }
 
-  return json(200, { plus: active });
+  return done(200, { plus: active }, { outcome: 'ok', user: userId, plus: active });
 });
