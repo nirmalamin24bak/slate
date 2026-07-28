@@ -40,6 +40,29 @@ gh secret list
 Run each without the value on the command line so it never lands in shell history; `gh`
 prompts for it.
 
+**Test the string before you set the secret.** GitHub will never show you a secret's value
+again, so a typo in `SUPABASE_DB_URL` surfaces as a failed deploy _after_ `db push` has already
+changed the production schema. There is no `psql` on the Windows dev machine and no need to
+install one — `scripts/psql.ps1` runs it in the Docker image the migration harness already
+requires:
+
+```
+$env:SUPABASE_DB_URL = (Read-Host 'paste the pooler URI')   # Read-Host keeps it out of history
+.\scripts\psql.ps1 -c "select current_user, version()"
+```
+
+A wrong password answers `FATAL: password authentication failed for user "postgres"` — note
+the pooler reports the underlying role, not `postgres.<ref>`, so that message does not mean the
+username is wrong. A wrong _host_ fails differently, at DNS or connect. Once `select` returns:
+
+```
+gh secret set SUPABASE_DB_URL --body $env:SUPABASE_DB_URL   # history records the variable, not the value
+Remove-Item Env:\SUPABASE_DB_URL
+```
+
+`--body` rather than the prompt because a piped value can carry a trailing newline into the
+secret, and PSReadLine stores the text you typed — the variable name — not what it expanded to.
+
 `SUPABASE_DB_URL` is new: it applies the reference seed (ingredients, dishes, exercises).
 Until it exists, production has the tables but no food in them, and every line resolves to
 nothing.
