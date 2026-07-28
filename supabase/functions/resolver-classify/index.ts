@@ -33,6 +33,9 @@ const MODEL_TIMEOUT_MS = 2500; // p95 budget is 1200ms; this is the hard stop
 function resolverDisabled(): boolean {
   return Deno.env.get('RESOLVER_DISABLED') === '1';
 }
+// Also the provider's prompt-cache TTL. providers.ts puts a cache breakpoint at
+// the end of the catalogue block; keep these two equal so a refresh writes a new
+// cache entry instead of the cache expiring under a still-current catalogue.
 const CATALOGUE_TTL_MS = 5 * 60 * 1000;
 const CONFIDENCE_FLOOR = 0.6;
 

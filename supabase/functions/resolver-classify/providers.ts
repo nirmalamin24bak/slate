@@ -24,7 +24,18 @@ function anthropicProvider(apiKey: string, model: string): ModelProvider {
           model,
           max_tokens: 500,
           temperature: 0, // classification, not prose; Haiku still accepts it
-          system,
+          // The system prompt is the whole catalogue (prompt.ts) — hundreds of
+          // dishes, exercises and packaged foods, identical for every caller and
+          // rebuilt only every CATALOGUE_TTL_MS. Sent as a plain string it was
+          // re-billed as fresh input tokens on EVERY classification, which is the
+          // single largest cost in the system and the reason the calls/day ceiling
+          // in migration ...0004 did not bound spend.
+          //
+          // One cache breakpoint at the end of the block makes it a cache read on
+          // every subsequent call. Anthropic's cache TTL is 5 minutes, which is
+          // exactly CATALOGUE_TTL_MS in index.ts — a refreshed catalogue writes a
+          // new cache entry rather than serving a stale one. Keep the two equal.
+          system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
           messages: [{ role: 'user', content: line }],
         },
         { signal },
