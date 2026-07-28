@@ -140,9 +140,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Pinned, not `latest`. This job runs `db push` against production; with a
+      # floating version a CLI release could change what a merge does to the live
+      # database between two otherwise identical commits. Bump deliberately, and
+      # re-run the migration harness (the `db` job) when you do.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.109.1
 
       - name: Link project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
