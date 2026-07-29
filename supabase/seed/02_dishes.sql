@@ -53,7 +53,12 @@ values
   ('dish_bhel_puri', 'Bhel Puri', null, array['bhel', 'bhel puri', 'bhelpuri', 'sukha bhel']::text[], 'plate', 1, false, null, null),
   ('dish_besan_chilla', 'Besan Chilla', null, array['chilla', 'cheela', 'besan cheela', 'pudla']::text[], 'piece', 1, true, 5, null),
   ('dish_veg_fried_rice', 'Veg Fried Rice', null, array['fried rice', 'veg fried rice', 'chinese fried rice']::text[], 'plate', 1, true, 12, null),
-  ('dish_lassi', 'Sweet Lassi', 'punjabi', array['lassi', 'sweet lassi', 'meethi lassi']::text[], 'katori', 1, false, null, 200)
+  ('dish_lassi', 'Sweet Lassi', 'punjabi', array['lassi', 'sweet lassi', 'meethi lassi']::text[], 'katori', 1, false, null, 200),
+  ('dish_kadhi', 'Kadhi (Gujarati)', 'gujarati', array['kadhi', 'kadi', 'gujarati kadhi', 'kadhi chawal']::text[], 'katori', 1, true, 3, 200),
+  ('dish_dal_dhokli', 'Dal Dhokli', 'gujarati', array['dal dhokli', 'dhokli', 'daal dhokli', 'varan phal']::text[], 'katori', 1, true, 4, 200),
+  ('dish_sev_tameta', 'Sev Tameta nu Shaak', 'gujarati', array['sev tameta', 'sev tomato', 'sev tameta nu shaak', 'tameta sev']::text[], 'katori', 1, true, 10, 200),
+  ('dish_dal_makhani', 'Dal Makhani', null, array['dal makhani', 'daal makhani', 'makhani dal', 'kali dal']::text[], 'katori', 1, true, 12, 200),
+  ('dish_paneer_tikka', 'Paneer Tikka', null, array['paneer tikka', 'panner tikka', 'tandoori paneer', 'paneer tikka dry']::text[], 'piece', 1, true, 2, null)
 on conflict (id) do update set name = excluded.name, region = excluded.region, aliases = excluded.aliases, default_unit = excluded.default_unit, default_qty = excluded.default_qty, is_home_cookable = excluded.is_home_cookable, cooking_fat_ml = excluded.cooking_fat_ml, serving_g = excluded.serving_g;
 
 insert into dish_ingredients (dish_id, ingredient_id, grams)
@@ -198,7 +203,30 @@ values
   ('dish_veg_fried_rice', 'IFCT_D033', 20),  -- capsicum
   ('dish_veg_fried_rice', 'IFCT_G017', 20),  -- onion
   ('dish_lassi', 'SUPP_CURD', 150),  -- curd
-  ('dish_lassi', 'SUPP_SUGAR', 20)  -- sugar
+  ('dish_lassi', 'SUPP_SUGAR', 20),  -- sugar
+  ('dish_kadhi', 'SUPP_CURD', 53),  -- curd
+  ('dish_kadhi', 'IFCT_B001', 4),  -- gram_flour_besan
+  ('dish_kadhi', 'SUPP_SUGAR', 4),  -- sugar
+  ('dish_dal_dhokli', 'IFCT_B021', 25),  -- lentil_pigeon_toor
+  ('dish_dal_dhokli', 'IFCT_A019', 16),  -- wheat_flour_whole
+  ('dish_dal_dhokli', 'IFCT_B001', 2),  -- gram_flour_besan
+  ('dish_dal_dhokli', 'IFCT_D076', 13),  -- tomato
+  ('dish_dal_dhokli', 'SUPP_SUGAR', 4),  -- sugar
+  ('dish_dal_dhokli', 'IFCT_H012', 2),  -- peanut
+  ('dish_dal_dhokli', 'IFCT_E064', 3),  -- tamarind
+  ('dish_sev_tameta', 'IFCT_D076', 160),  -- tomato
+  ('dish_sev_tameta', 'IFCT_B001', 15),  -- gram_flour_besan
+  ('dish_sev_tameta', 'IFCT_T012', 7),  -- oil_sunflower
+  ('dish_sev_tameta', 'SUPP_SUGAR', 1),  -- sugar
+  ('dish_dal_makhani', 'IFCT_B003', 33),  -- lentil_black_urad
+  ('dish_dal_makhani', 'IFCT_B020', 8),  -- kidney_bean_rajma
+  ('dish_dal_makhani', 'IFCT_D076', 38),  -- tomato
+  ('dish_dal_makhani', 'SUPP_CREAM', 10),  -- cream
+  ('dish_paneer_tikka', 'IFCT_L003', 29),  -- paneer
+  ('dish_paneer_tikka', 'SUPP_CURD', 12),  -- curd
+  ('dish_paneer_tikka', 'IFCT_D033', 7),  -- capsicum
+  ('dish_paneer_tikka', 'IFCT_G017', 7),  -- onion
+  ('dish_paneer_tikka', 'IFCT_B001', 1)  -- gram_flour_besan
 on conflict (dish_id, ingredient_id) do update set grams = excluded.grams;
 
 -- drop ingredients a corrected recipe no longer contains
@@ -253,7 +281,12 @@ delete from dish_ingredients
          'dish_bhel_puri',
          'dish_besan_chilla',
          'dish_veg_fried_rice',
-         'dish_lassi'
+         'dish_lassi',
+         'dish_kadhi',
+         'dish_dal_dhokli',
+         'dish_sev_tameta',
+         'dish_dal_makhani',
+         'dish_paneer_tikka'
        )
    and (dish_id, ingredient_id) not in (
          ('dish_poha_gujarati', 'IFCT_A011'),
@@ -396,7 +429,30 @@ delete from dish_ingredients
          ('dish_veg_fried_rice', 'IFCT_D033'),
          ('dish_veg_fried_rice', 'IFCT_G017'),
          ('dish_lassi', 'SUPP_CURD'),
-         ('dish_lassi', 'SUPP_SUGAR')
+         ('dish_lassi', 'SUPP_SUGAR'),
+         ('dish_kadhi', 'SUPP_CURD'),
+         ('dish_kadhi', 'IFCT_B001'),
+         ('dish_kadhi', 'SUPP_SUGAR'),
+         ('dish_dal_dhokli', 'IFCT_B021'),
+         ('dish_dal_dhokli', 'IFCT_A019'),
+         ('dish_dal_dhokli', 'IFCT_B001'),
+         ('dish_dal_dhokli', 'IFCT_D076'),
+         ('dish_dal_dhokli', 'SUPP_SUGAR'),
+         ('dish_dal_dhokli', 'IFCT_H012'),
+         ('dish_dal_dhokli', 'IFCT_E064'),
+         ('dish_sev_tameta', 'IFCT_D076'),
+         ('dish_sev_tameta', 'IFCT_B001'),
+         ('dish_sev_tameta', 'IFCT_T012'),
+         ('dish_sev_tameta', 'SUPP_SUGAR'),
+         ('dish_dal_makhani', 'IFCT_B003'),
+         ('dish_dal_makhani', 'IFCT_B020'),
+         ('dish_dal_makhani', 'IFCT_D076'),
+         ('dish_dal_makhani', 'SUPP_CREAM'),
+         ('dish_paneer_tikka', 'IFCT_L003'),
+         ('dish_paneer_tikka', 'SUPP_CURD'),
+         ('dish_paneer_tikka', 'IFCT_D033'),
+         ('dish_paneer_tikka', 'IFCT_G017'),
+         ('dish_paneer_tikka', 'IFCT_B001')
        );
 
 commit;

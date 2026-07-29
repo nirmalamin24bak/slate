@@ -1262,5 +1262,167 @@
       }
     ],
     "notes": "One ~200ml glass, curd blended with water and sugar; no malai topping. Serving basis: one katori = 200 ml at the median kitchen, taken at 1 g/ml (spec/06); the recipe grams above are the raw basis and are scaled to it."
+  },
+  {
+    "id": "dish_kadhi",
+    "name": "Kadhi (Gujarati)",
+    "region": "gujarati",
+    "aliases": ["kadhi", "kadi", "gujarati kadhi", "kadhi chawal"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 3,
+    "serving_g": 200,
+    "ingredients": [
+      {
+        "ref": "curd",
+        "grams": 53
+      },
+      {
+        "ref": "gram_flour_besan",
+        "grams": 4
+      },
+      {
+        "ref": "sugar",
+        "grams": 4
+      }
+    ],
+    "notes": "Nirmal recipe 29 Jul 2026: 1 cup sour curd + 3 cups water, 2 tbsp besan, 1 to 1.5 tbsp jaggery, 1 tbsp ghee tadka. Yield ~900 ml after an 8-10 min simmer = 4.5 katoris; grams are that batch divided by 4.5, jaggery taken at 1.25 tbsp = ~19 g. Jaggery maps to the sugar ref - no jaggery row in ref-map, and 383 vs 398 kcal/100 g is inside the noise (same call as dish_paneer_butter_masala). Ginger-chilli paste, whole spices, curry leaves and coriander omitted as trace. Ghee tadka is cooking_fat_ml, not an ingredient. Serving basis: one katori = 200 ml at 1 g/ml (spec/06); recipe grams are the raw basis scaled to it. Method note carrying no kcal, recorded so it is not lost: stir continuously, but NOT \"in one direction\" - that part is folklore. Continuity is what stops the curd splitting; direction does nothing."
+  },
+  {
+    "id": "dish_dal_dhokli",
+    "name": "Dal Dhokli",
+    "region": "gujarati",
+    "aliases": ["dal dhokli", "dhokli", "daal dhokli", "varan phal"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 4,
+    "serving_g": 200,
+    "ingredients": [
+      {
+        "ref": "lentil_pigeon_toor",
+        "grams": 25
+      },
+      {
+        "ref": "wheat_flour_whole",
+        "grams": 16
+      },
+      {
+        "ref": "gram_flour_besan",
+        "grams": 2
+      },
+      {
+        "ref": "tomato",
+        "grams": 13
+      },
+      {
+        "ref": "sugar",
+        "grams": 4
+      },
+      {
+        "ref": "peanut",
+        "grams": 2
+      },
+      {
+        "ref": "tamarind",
+        "grams": 3
+      }
+    ],
+    "notes": "Nirmal recipe 29 Jul 2026: 1 cup toor dal, dilution started at 5 cups and finishing near 5.5 once the dhokli has drunk its share; 1 tomato, 2 tbsp peanuts, lemon-sized tamarind pulp, 2 tbsp jaggery; dhokli of 1 cup atta + 2 tbsp besan with 1 tbsp oil, plus a ghee tadka. Yield ~1600 ml = 8 katoris; grams are that batch divided by 8. An earlier draft used a 6.5-cup dilution and 9 katoris, which made the band generous rather than tight. Jaggery maps to the sugar ref. Dough oil and tadka ghee both ride in cooking_fat_ml (30 ml batch / 8), never as ingredients, so the engine cannot double-count them. Serving basis: 200 ml katori at 1 g/ml. Method note carrying no kcal, recorded so it is not lost: the peanuts go into the pressure cooker WITH the dal. They do not soften in a 10-minute boil."
+  },
+  {
+    "id": "dish_sev_tameta",
+    "name": "Sev Tameta nu Shaak",
+    "region": "gujarati",
+    "aliases": ["sev tameta", "sev tomato", "sev tameta nu shaak", "tameta sev"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 10,
+    "serving_g": 200,
+    "ingredients": [
+      {
+        "ref": "tomato",
+        "grams": 160
+      },
+      {
+        "ref": "gram_flour_besan",
+        "grams": 15
+      },
+      {
+        "ref": "oil_sunflower",
+        "grams": 7
+      },
+      {
+        "ref": "sugar",
+        "grams": 1
+      }
+    ],
+    "notes": "Nirmal recipe 29 Jul 2026: 4 large tomatoes, 2 tbsp oil, 1/2 tsp jaggery, and 60 g thick gathiya sev - specified BY WEIGHT, not by cup, because this dish is load-bearing on that one number. Yield ~3 katoris after the tomatoes break down; grams are that batch divided by 3. Sev is modelled at the committed dish_sev ratio (30 g sev = 22 g besan + 10 g absorbed oil), so 60 g = 44 g besan + 20 g oil, divided by 3; that implies ~583 kcal/100 g against a real ~550, about 6% high and tolerable. The absorbed oil IS an ingredient - the deep-fried exception, same as dish_samosa and dish_sev - while the 2 tbsp tadka oil is cooking_fat_ml. Sev plus oil are ~80% of the katori, so a heavy hand moves this dish more than any other in the table: 100 g of sev, which people do serve, lands near 325 and outside the band. That is a portion difference, not a recipe error - the band checks the recipe. NO ONION AND NO GARLIC: pure Gujarati is ginger and green chilli only (Nirmal, 29 Jul 2026, resolving a contradiction in the first draft, which listed an optional onion alongside a ginger-garlic-chilli paste). A single dish row cannot hold both variants, so this is the Gujarati one; a Kathiyawadi version with onion would be a separate dish with its own region, worth about +13 kcal per katori. Serving basis: 200 ml katori at 1 g/ml."
+  },
+  {
+    "id": "dish_dal_makhani",
+    "name": "Dal Makhani",
+    "region": null,
+    "aliases": ["dal makhani", "daal makhani", "makhani dal", "kali dal"],
+    "default_unit": "katori",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 12,
+    "serving_g": 200,
+    "ingredients": [
+      {
+        "ref": "lentil_black_urad",
+        "grams": 33
+      },
+      {
+        "ref": "kidney_bean_rajma",
+        "grams": 8
+      },
+      {
+        "ref": "tomato",
+        "grams": 38
+      },
+      {
+        "ref": "cream",
+        "grams": 10
+      }
+    ],
+    "notes": "Nirmal recipe 29 Jul 2026: 1 cup whole black urad + 1/4 cup rajma soaked overnight, 1 to 1.25 cups fresh tomato puree, 4 tbsp butter + 1 tbsp oil, 1/4 cup cream, plus 1 tbsp butter to finish (pinned - the recipe said only \"a last knob\"). Yield 6 katoris, not 7: 250 g dry dal into 1400 ml is 178 g/litre, and finished dal makhani after a 60-minute reduction with cream sits at 210-250 g/litre. Grams are the batch divided by 6. Butter has no ref-map row and rides in cooking_fat_ml at its FAT FRACTION, not its volume: 56 g butter is 402 kcal, which is 45 ml of oil at 900 kcal/100 ml, not the 50 ml a volume conversion suggests. 45 + 15 ml oil + 11 ml for the finishing knob = 71 ml / 6. See docs/dish-table-workflow.md; the rule propagates to every butter dish. Kasuri methi and garam masala omitted as trace. Cooking water is 5 cups, not 4. Serving basis: 200 ml katori at 1 g/ml."
+  },
+  {
+    "id": "dish_paneer_tikka",
+    "name": "Paneer Tikka",
+    "region": null,
+    "aliases": ["paneer tikka", "panner tikka", "tandoori paneer", "paneer tikka dry"],
+    "default_unit": "piece",
+    "default_qty": 1,
+    "is_home_cookable": true,
+    "cooking_fat_ml": 2,
+    "serving_g": null,
+    "ingredients": [
+      {
+        "ref": "paneer",
+        "grams": 29
+      },
+      {
+        "ref": "curd",
+        "grams": 12
+      },
+      {
+        "ref": "capsicum",
+        "grams": 7
+      },
+      {
+        "ref": "onion",
+        "grams": 7
+      },
+      {
+        "ref": "gram_flour_besan",
+        "grams": 1
+      }
+    ],
+    "notes": "Nirmal recipe 29 Jul 2026: 400 g paneer in 1.2-inch cubes, 1 capsicum + 1 onion in petals, 1 cup hung curd, 2 tbsp roasted besan, 1 tbsp mustard oil. The cube size is 1.2-inch by decision, not 1.5: a 1.5-inch cube is ~55 cm3 and ~57 g, giving 7 pieces at ~205 kcal each; 1.2-inch gives ~28 g and 14 pieces, and carries more surface char per gram, which is the point of a tikka. Grams are the batch divided by 14, with the hung curd taken at ~70% adhering to the skewer rather than the full 240 g - the rest stays in the bowl. Mustard oil plus the butter baste are cooking_fat_ml. serving_g is null because the ingredients already are the thing on the plate: nothing is cooked from dry or diluted, so there is no second basis to declare. Method notes carrying no kcal, recorded so they are not lost: marination has no 2-hour ceiling, overnight is fine; oven is 10-12 min, not 12-15; store-bought or frozen paneer wants a 15-minute soak in warm salted water and a pat dry before it meets the marinade."
   }
 ]
