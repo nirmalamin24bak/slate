@@ -43,6 +43,13 @@ Field by field, in the order they cause mistakes:
   ingredient — the engine adds it, so listing both double-counts. Exception, already used:
   deep-fried items (samosa, sev, bhel) carry absorbed oil as an _ingredient_, because absorbed
   oil is not the katori-distributed cooking oil the kitchen calibration models.
+  - **Butter and ghee have no ref-map row, and go here — converted by ENERGY, not by volume.**
+    The field is millilitres of oil, and the engine values it at ~900 kcal/100 ml. Butter is
+    ~717 kcal/100 g, so 56 g of butter is 402 kcal, which is **45 ml**, not the ~60 ml a
+    volume conversion gives you. Divide the fat's total kcal by 9 to get the number to write.
+    Ghee is ~900 kcal/100 g and converts roughly 1:1 by weight. Getting this wrong inflates
+    every rich dish in the table by a fifth, silently and consistently, and the band test
+    cannot catch it — the band is derived from the same wrong number.
 - **`aliases`** is what the resolver matches. Include the Hinglish a Vadodara user types.
   No two dishes may claim the same alias — the resolver has no way to choose, and the user
   sees a different number for the same words.
