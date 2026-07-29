@@ -206,18 +206,18 @@ values
   ('dish_lassi', 'SUPP_SUGAR', 20),  -- sugar
   ('dish_kadhi', 'SUPP_CURD', 53),  -- curd
   ('dish_kadhi', 'IFCT_B001', 4),  -- gram_flour_besan
-  ('dish_kadhi', 'SUPP_SUGAR', 4),  -- sugar
+  ('dish_kadhi', 'IFCT_I001', 4),  -- jaggery
   ('dish_dal_dhokli', 'IFCT_B021', 25),  -- lentil_pigeon_toor
   ('dish_dal_dhokli', 'IFCT_A019', 16),  -- wheat_flour_whole
   ('dish_dal_dhokli', 'IFCT_B001', 2),  -- gram_flour_besan
   ('dish_dal_dhokli', 'IFCT_D076', 13),  -- tomato
-  ('dish_dal_dhokli', 'SUPP_SUGAR', 4),  -- sugar
+  ('dish_dal_dhokli', 'IFCT_I001', 4),  -- jaggery
   ('dish_dal_dhokli', 'IFCT_H012', 2),  -- peanut
   ('dish_dal_dhokli', 'IFCT_E064', 3),  -- tamarind
   ('dish_sev_tameta', 'IFCT_D076', 160),  -- tomato
   ('dish_sev_tameta', 'IFCT_B001', 15),  -- gram_flour_besan
   ('dish_sev_tameta', 'IFCT_T012', 7),  -- oil_sunflower
-  ('dish_sev_tameta', 'SUPP_SUGAR', 1),  -- sugar
+  ('dish_sev_tameta', 'IFCT_I001', 1),  -- jaggery
   ('dish_dal_makhani', 'IFCT_B003', 33),  -- lentil_black_urad
   ('dish_dal_makhani', 'IFCT_B020', 8),  -- kidney_bean_rajma
   ('dish_dal_makhani', 'IFCT_D076', 38),  -- tomato
@@ -432,18 +432,18 @@ delete from dish_ingredients
          ('dish_lassi', 'SUPP_SUGAR'),
          ('dish_kadhi', 'SUPP_CURD'),
          ('dish_kadhi', 'IFCT_B001'),
-         ('dish_kadhi', 'SUPP_SUGAR'),
+         ('dish_kadhi', 'IFCT_I001'),
          ('dish_dal_dhokli', 'IFCT_B021'),
          ('dish_dal_dhokli', 'IFCT_A019'),
          ('dish_dal_dhokli', 'IFCT_B001'),
          ('dish_dal_dhokli', 'IFCT_D076'),
-         ('dish_dal_dhokli', 'SUPP_SUGAR'),
+         ('dish_dal_dhokli', 'IFCT_I001'),
          ('dish_dal_dhokli', 'IFCT_H012'),
          ('dish_dal_dhokli', 'IFCT_E064'),
          ('dish_sev_tameta', 'IFCT_D076'),
          ('dish_sev_tameta', 'IFCT_B001'),
          ('dish_sev_tameta', 'IFCT_T012'),
-         ('dish_sev_tameta', 'SUPP_SUGAR'),
+         ('dish_sev_tameta', 'IFCT_I001'),
          ('dish_dal_makhani', 'IFCT_B003'),
          ('dish_dal_makhani', 'IFCT_B020'),
          ('dish_dal_makhani', 'IFCT_D076'),

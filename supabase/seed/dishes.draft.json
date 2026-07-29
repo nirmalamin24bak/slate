@@ -1283,11 +1283,11 @@
         "grams": 4
       },
       {
-        "ref": "sugar",
+        "ref": "jaggery",
         "grams": 4
       }
     ],
-    "notes": "Nirmal recipe 29 Jul 2026: 1 cup sour curd + 3 cups water, 2 tbsp besan, 1 to 1.5 tbsp jaggery, 1 tbsp ghee tadka. Yield ~900 ml after an 8-10 min simmer = 4.5 katoris; grams are that batch divided by 4.5, jaggery taken at 1.25 tbsp = ~19 g. Jaggery maps to the sugar ref - no jaggery row in ref-map, and 383 vs 398 kcal/100 g is inside the noise (same call as dish_paneer_butter_masala). Ginger-chilli paste, whole spices, curry leaves and coriander omitted as trace. Ghee tadka is cooking_fat_ml, not an ingredient. Serving basis: one katori = 200 ml at 1 g/ml (spec/06); recipe grams are the raw basis scaled to it. Method note carrying no kcal, recorded so it is not lost: stir continuously, but NOT \"in one direction\" - that part is folklore. Continuity is what stops the curd splitting; direction does nothing."
+    "notes": "Nirmal recipe 29 Jul 2026: 1 cup sour curd + 3 cups water, 2 tbsp besan, 1 to 1.5 tbsp jaggery, 1 tbsp ghee tadka. Yield ~900 ml after an 8-10 min simmer = 4.5 katoris; grams are that batch divided by 4.5, jaggery taken at 1.25 tbsp = ~19 g. Jaggery uses the jaggery ref (IFCT I001, cane, 353.7 kcal/100 g). It was briefly mapped to sugar on the false belief that IFCT had no jaggery row; it does. Ginger-chilli paste, whole spices, curry leaves and coriander omitted as trace. Ghee tadka is cooking_fat_ml, not an ingredient. Serving basis: one katori = 200 ml at 1 g/ml (spec/06); recipe grams are the raw basis scaled to it. Method note carrying no kcal, recorded so it is not lost: stir continuously, but NOT \"in one direction\" - that part is folklore. Continuity is what stops the curd splitting; direction does nothing."
   },
   {
     "id": "dish_dal_dhokli",
@@ -1317,7 +1317,7 @@
         "grams": 13
       },
       {
-        "ref": "sugar",
+        "ref": "jaggery",
         "grams": 4
       },
       {
@@ -1329,7 +1329,7 @@
         "grams": 3
       }
     ],
-    "notes": "Nirmal recipe 29 Jul 2026: 1 cup toor dal, dilution started at 5 cups and finishing near 5.5 once the dhokli has drunk its share; 1 tomato, 2 tbsp peanuts, lemon-sized tamarind pulp, 2 tbsp jaggery; dhokli of 1 cup atta + 2 tbsp besan with 1 tbsp oil, plus a ghee tadka. Yield ~1600 ml = 8 katoris; grams are that batch divided by 8. An earlier draft used a 6.5-cup dilution and 9 katoris, which made the band generous rather than tight. Jaggery maps to the sugar ref. Dough oil and tadka ghee both ride in cooking_fat_ml (30 ml batch / 8), never as ingredients, so the engine cannot double-count them. Serving basis: 200 ml katori at 1 g/ml. Method note carrying no kcal, recorded so it is not lost: the peanuts go into the pressure cooker WITH the dal. They do not soften in a 10-minute boil."
+    "notes": "Nirmal recipe 29 Jul 2026: 1 cup toor dal, dilution started at 5 cups and finishing near 5.5 once the dhokli has drunk its share; 1 tomato, 2 tbsp peanuts, lemon-sized tamarind pulp, 2 tbsp jaggery; dhokli of 1 cup atta + 2 tbsp besan with 1 tbsp oil, plus a ghee tadka. Yield ~1600 ml = 8 katoris; grams are that batch divided by 8. An earlier draft used a 6.5-cup dilution and 9 katoris, which made the band generous rather than tight. Jaggery uses the jaggery ref (IFCT I001), not the sugar ref. Dough oil and tadka ghee both ride in cooking_fat_ml (30 ml batch / 8), never as ingredients, so the engine cannot double-count them. Serving basis: 200 ml katori at 1 g/ml. Method note carrying no kcal, recorded so it is not lost: the peanuts go into the pressure cooker WITH the dal. They do not soften in a 10-minute boil."
   },
   {
     "id": "dish_sev_tameta",
@@ -1355,7 +1355,7 @@
         "grams": 7
       },
       {
-        "ref": "sugar",
+        "ref": "jaggery",
         "grams": 1
       }
     ],
