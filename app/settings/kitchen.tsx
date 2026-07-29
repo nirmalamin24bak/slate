@@ -15,10 +15,15 @@ import { dayKey } from '@/journal';
 import { services } from '@/lib/services';
 import { numberMaxFontScale, radius, screenPadding, spacing, type, useTheme } from '@/theme';
 
+// Labelled with the millilitres, not just the size word. The engine reads a
+// katori as a volume, so a user who never opens this screen is still working
+// to a number — better they can see which one. "Medium" rather than
+// "Standard": 200 is our default, but the word implies it is the correct
+// katori rather than the middle option, and it has not earned that.
 const KATORI = [
-  { value: '150', label: 'Small' },
-  { value: '200', label: 'Standard' },
-  { value: '250', label: 'Large' },
+  { value: '150', label: 'Small · 150ml' },
+  { value: '200', label: 'Medium · 200ml' },
+  { value: '250', label: 'Large · 250ml' },
 ] as const;
 
 const ROTI = [

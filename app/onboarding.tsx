@@ -457,7 +457,7 @@ export default function Onboarding() {
               value={k.katoriMl}
               onChange={(katoriMl) => setKitchen({ katoriMl })}
               format={(o) =>
-                o === 150 ? 'Small · 150ml' : o === 200 ? 'Standard · 200ml' : 'Large · 250ml'
+                o === 150 ? 'Small · 150ml' : o === 200 ? 'Medium · 200ml' : 'Large · 250ml'
               }
             />
             <Text style={[type.label, styles.gap, { color: colors.inkMute }]}>Your roti</Text>
