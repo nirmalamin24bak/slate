@@ -49,7 +49,7 @@ SUPABASE_DB_URL is not set in this shell. Set it without typing the value inline
     $env:SUPABASE_DB_URL = (Read-Host 'paste the pooler URI')
 
 The session pooler string, not the direct one - see docs/launch-gate.md 0.2:
-    postgresql://postgres.<ref>:<PASSWORD>@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
+    postgresql://postgres.<ref>:<PASSWORD>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
 '@
 }
 

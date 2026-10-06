@@ -49,7 +49,7 @@ function fakeLegacy(
   };
 }
 
-const KEY = 'sb-ruynujwntbcgznoiwugl-auth-token';
+const KEY = 'sb-rhnukmnazznlgvvcjibv-auth-token';
 
 /** Roughly the shape and size of a real Supabase session: comfortably chunked. */
 const SESSION = JSON.stringify({

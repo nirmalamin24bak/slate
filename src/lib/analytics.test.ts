@@ -378,12 +378,12 @@ describe('signinDeferral', () => {
   it('never returns the message itself', () => {
     // The whole point: a Supabase error can carry the project ref or a request
     // id, and neither is allowed into an event payload.
-    const message = 'project ruynujwntbcgznoiwugl rejected request 8f2a-c19d';
+    const message = 'project rhnukmnazznlgvvcjibv rejected request 8f2a-c19d';
     expect(signinDeferral(message)).toBe('rejected');
     const client = fakeClient();
     __setClientForTest(client);
     track({ name: 'anon_signin_deferred', reason: signinDeferral(message) });
-    expect(JSON.stringify(client.captured)).not.toContain('ruynujwntbcgznoiwugl');
+    expect(JSON.stringify(client.captured)).not.toContain('rhnukmnazznlgvvcjibv');
   });
 });
 

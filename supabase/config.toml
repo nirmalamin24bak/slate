@@ -2,7 +2,7 @@
 # verification lived only in dashboard state — one toggle from disabled, with
 # no review gate. Declaring it here makes it reviewable and reproducible.
 
-project_id = "ruynujwntbcgznoiwugl"
+project_id = "rhnukmnazznlgvvcjibv"
 
 # resolver-classify and delete-account both authenticate a Supabase user and
 # MUST verify the JWT at the gateway.

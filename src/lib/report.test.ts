@@ -29,7 +29,7 @@ afterEach(() => {
 function pollutedEvent(): SentryEvent {
   return {
     request: {
-      url: 'https://ruynujwntbcgznoiwugl.supabase.co/functions/v1/resolver-classify',
+      url: 'https://rhnukmnazznlgvvcjibv.supabase.co/functions/v1/resolver-classify',
       data: JSON.stringify({ line: '2 roti aur ek katori dal' }),
       headers: { Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.secret' },
     },
@@ -69,7 +69,7 @@ describe('scrubEvent', () => {
       'iPhone',
       '49.36.0.1',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
-      'ruynujwntbcgznoiwugl', // the project ref, which analytics.ts also refuses
+      'rhnukmnazznlgvvcjibv', // the project ref, which analytics.ts also refuses
     ]) {
       expect(serialised).not.toContain(secret);
     }

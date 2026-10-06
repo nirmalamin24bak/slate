@@ -1,7 +1,8 @@
 # Launch gate — everything the code cannot do for itself
 
-> **6 Oct 2026:** the Supabase project named below (`ruynujwntbcgznoiwugl`) no longer exists,
-> and the GitHub secrets in §0.2 still point at it. Its replacement must be in ap-south-1. Read
+> **6 Oct 2026:** the Supabase project is now `rhnukmnazznlgvvcjibv`, verified in ap-south-1,
+> and §0 below is updated for it. The previous project, `ruynujwntbcgznoiwugl`, no longer
+> exists. The GitHub secrets in §0.2 still point at it until they are replaced. Read
 > [`../HANDOVER.md`](../HANDOVER.md) before acting on §0.
 
 Status as of 28 Jul 2026. The code half of production readiness is done and green. Nothing on
@@ -17,8 +18,9 @@ item above it exists.
 ## 0. Before anything touches production
 
 **0.1 [NE] Verify the backups you already have.** `docs/ops-verification.md` is entirely
-unchecked, and merging PR #4 auto-applies sixteen new migrations to the live project. Do this first
-— the whole page, but the test restore above all. A backup nobody has restored is a hope.
+unchecked. The new project starts empty and the first merge to `main` applies all 25 migrations
+to it, so run the drill once the first deploy has landed and before any user data exists — the
+whole page, but the test restore above all. A backup nobody has restored is a hope.
 
 ```
 # Supabase Dashboard → Database → Backups: note the tier, retention, PITR yes/no
@@ -36,7 +38,7 @@ at deploy — or worse, half-deploys.
 
 ```
 gh secret set SUPABASE_ACCESS_TOKEN   # personal access token, Supabase account settings
-gh secret set SUPABASE_PROJECT_REF    # ruynujwntbcgznoiwugl
+gh secret set SUPABASE_PROJECT_REF    # rhnukmnazznlgvvcjibv
 gh secret set SUPABASE_DB_URL         # SESSION POOLER string — see the warning below
 gh secret list
 ```
@@ -75,20 +77,21 @@ secret, and PSReadLine stores the text you typed — the variable name — not w
 Until it exists, production has the tables but no food in them, and every line resolves to
 nothing.
 
-> **It must be the session pooler string, not the direct one.** Checked 28 Jul 2026:
-> `db.ruynujwntbcgznoiwugl.supabase.co` has **no A record at all** (AAAA only), and GitHub
+> **It must be the session pooler string, not the direct one.** Checked 6 Oct 2026:
+> `db.rhnukmnazznlgvvcjibv.supabase.co` has **no A record at all** (AAAA only), and GitHub
 > runners are IPv4-only — the direct string cannot connect from CI.
 >
-> The pooler host for this project, confirmed 29 Jul 2026, is
-> `aws-1-ap-south-1.pooler.supabase.com` — three A records behind a CNAME to an ap-south-1 ELB.
-> Note `aws-1`, not `aws-0`: the prefix is per-project and Supabase's own docs show both, so read
-> it off Project Settings → Database → Connection pooling rather than assuming. Port `5432` is
+> The pooler host for this project, confirmed 6 Oct 2026, is
+> `aws-0-ap-south-1.pooler.supabase.com`. Probed without a password, `aws-0` asks for one and
+> `aws-1` answers `tenant/user postgres.rhnukmnazznlgvvcjibv not found`. The previous project
+> was on `aws-1`, which is the point: the prefix is per project and Supabase's own docs show
+> both, so read it off the dashboard's Connect panel rather than assuming. Port `5432` is
 > session mode, which is the one to use — `6543` is transaction mode and cannot run the seed's
 > `--single-transaction` multi-statement apply. The pooler username also differs:
-> `postgres.ruynujwntbcgznoiwugl`, not plain `postgres`.
+> `postgres.rhnukmnazznlgvvcjibv`, not plain `postgres`.
 >
 > Assembled, the secret's value is one line:
-> `postgresql://postgres.ruynujwntbcgznoiwugl:<PASSWORD>@aws-1-ap-south-1.pooler.supabase.com:5432/postgres`
+> `postgresql://postgres.rhnukmnazznlgvvcjibv:<PASSWORD>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres`
 >
 > If the password contains `@ : / ? # [ ] %` or a space, percent-encode it, or `psql` will parse
 > the string wrongly and fail somewhere unhelpful. `@` is `%40`, `#` is `%23`, `%` is `%25`.
@@ -96,7 +99,8 @@ nothing.
 > The string carries the database password, so it belongs only in the secret store: never in
 > `.env`, never in a commit, never pasted into a chat or an issue. If one ever is, rotate it
 > at Project Settings → Database → Reset database password and set the secret again.
-> (Done once already: the password was exposed on 28 Jul 2026 and rotated the same day.)
+> (It has happened once, on the previous project: a password was exposed on 28 Jul 2026 and
+> rotated the same day.)
 
 **0.3 Dry-run the migrations and the seed.** Half of this is now automated and done:
 
@@ -104,7 +108,7 @@ nothing.
 node scripts/db-migration-test.mjs
 ```
 
-spins a throwaway `supabase/postgres`, applies all 19 migrations and all three seed files in
+spins a throwaway `supabase/postgres`, applies all 25 migrations and all three seed files in
 order, applies the seeds a second time to prove idempotency, and asserts row counts, RLS on
 every table, the reaper's revoked EXECUTE, and the validated `entries` constraints. It passes,
 and CI runs it on every change under `supabase/`. Its first run caught a syntax error in
@@ -128,10 +132,12 @@ foreach ($f in Get-ChildItem supabase/seed/0*.sql) {
     (select count(*) from dishes)            as dishes,
     (select count(*) from dish_ingredients)  as dish_ingredients,
     (select count(*) from exercises)         as exercises"
-# expect 549, 50, 141, 20
+# expect 549, 55, 164, 20 as of 6 Oct 2026. The harness derives the dish counts from the
+# seed JSON, so trust its output over this line once the dish table grows.
 ```
 
-**0.4 [eng, after 0.1–0.3] Merge PR #4.** Only then. The merge is what triggers the deploy.
+**0.4 [eng, after 0.2–0.3] Merge to `main`**, through a PR from `rork`, which contains PR #4.
+Only then. The merge is what triggers the deploy.
 
 ---
 
