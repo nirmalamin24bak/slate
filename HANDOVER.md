@@ -18,7 +18,7 @@ Gates, run 6 Oct 2026 on Node 24.14 against this branch:
 | `npm ci`                                            | ok                                                    |
 | `npx tsc --noEmit`                                  | clean                                                 |
 | `npx eslint .`                                      | clean                                                 |
-| `npx vitest run --coverage`                         | 635 passed, 2 skipped, coverage thresholds hold       |
+| `npx vitest run --coverage`                         | 645 passed, 2 skipped, coverage thresholds hold       |
 | `node scripts/db-migration-test.mjs` (needs Docker) | 25 migrations, 3 seed files, 66 checks, green         |
 | `npm audit --omit=dev --audit-level=high`           | **fails**: 1 critical, 29 high (see the next section) |
 
