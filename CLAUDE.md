@@ -1,6 +1,6 @@
 # CLAUDE.md — Slate
 
-Read this first, every session. Then read `MASTER.md`. Do not begin work until you have both in context.
+Read this first, every session. Then read `MASTER.md`. Do not begin work until you have both in context. Then read `HANDOVER.md` for where things stand.
 
 ---
 

@@ -1,5 +1,9 @@
 # Launch gate — everything the code cannot do for itself
 
+> **6 Oct 2026:** the Supabase project named below (`ruynujwntbcgznoiwugl`) no longer exists,
+> and the GitHub secrets in §0.2 still point at it. Its replacement must be in ap-south-1. Read
+> [`../HANDOVER.md`](../HANDOVER.md) before acting on §0.
+
 Status as of 28 Jul 2026. The code half of production readiness is done and green. Nothing on
 this page is a coding task: each item needs an account, a signature, a card, a phone, or a
 decision only a founder can make. They are ordered so that finishing them top to bottom never
