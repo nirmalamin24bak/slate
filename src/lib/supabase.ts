@@ -7,8 +7,8 @@ import { env } from './env';
 import { sessionStore } from './secureSession';
 
 // Supabase is truth; expo-sqlite is the on-device read source (spec/04).
-// Region ap-south-1 (Mumbai) — DPDP data residency. Confirmed in the
-// dashboard by Nirmal; scripts/check-region.mjs re-checks best-effort.
+// Region ap-south-1 (Mumbai) — DPDP data residency. scripts/check-region.mjs
+// verifies it from the database host's address and exits 0 only in ap-south-1.
 //
 // Auth model (MASTER.md, reversed twice, final): anonymous sign-in at
 // install. No login screen exists anywhere. Sign-in is an offer in
